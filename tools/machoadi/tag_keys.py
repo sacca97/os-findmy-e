@@ -75,6 +75,41 @@ def _describe(record) -> str:  # noqa: ANN001
         return f"{getattr(record, 'device_name', '?')} / {getattr(record, 'device_model', '?')}"
 
 
+async def read_accessories(store, keys, say=print) -> list:  # noqa: ANN001
+    """What `store.fetch_accessories(keys)` does, step by step, saying what each step found.
+
+    The library's one-call version drops what it cannot use *quietly* (a beacon with no private key is a device,
+    not a tag; a record with no key held is someone else's). Here the counts are printed, so "my Chinese tag is
+    missing" can be told from "it was never in the account": a tag paired through the Find My app is a master
+    beacon with a private key; a clone flashed with its own keys is not in the account at all.
+    No secret is printed: record types, counts, models, and whether a private key is present.
+    """
+    from findmy.cloudkit.beacons import (  # noqa: PLC0415
+        accessories_from_records,
+        can_be_located,
+        decrypt_records,
+        group_records,
+    )
+
+    zone_keys = await store.zone_keys(keys)
+    records = await store.fetch_records()
+    kinds: dict[str, int] = {}
+    for record in records:
+        kinds[record.record_type or "<untyped>"] = kinds.get(record.record_type or "<untyped>", 0) + 1
+    say(f"[tags] fetched {len(records)} BeaconStore record(s): "
+        + ", ".join(f"{n} x {kind}" for kind, n in sorted(kinds.items())))
+    decrypted = decrypt_records(records, zone_keys,
+                                default_master_keys=await store.zone_record_defaults(zone_keys))
+    say(f"[tags] decrypted {len(decrypted)}; skipped: {dict(decrypted.skipped) or 'none'}")
+    for group in group_records(decrypted):
+        values = group.beacon.values
+        secondary = [n for n in ("sharedSecret2", "secureLocationsSharedSecret") if isinstance(values.get(n), bytes)]
+        say(f"  beacon model={values.get('model', '<none>')!r} secondary={'+'.join(secondary) or 'neither'} "
+            f"private key={'yes' if can_be_located(group.beacon) else 'NO (a device, not a tag: dropped)'} "
+            f"naming record={'yes' if group.naming else 'no'}")
+    return accessories_from_records(decrypted)
+
+
 async def run(account, *, list_only: bool = False, save: str | None = None, days: int = 7,  # noqa: ANN001, PLR0912
               ask=input, ask_secret=getpass.getpass, say=print) -> int:  # noqa: ANN001
     from findmy.cloudkit import AsyncBeaconStore  # noqa: PLC0415
@@ -119,7 +154,7 @@ async def run(account, *, list_only: bool = False, save: str | None = None, days
         say(f"[tags] {len(keys)} elliptic-curve key(s) read from the keychain views")
         store = AsyncBeaconStore(ck_account)
         try:
-            accessories = await store.fetch_accessories(keys)
+            accessories = await read_accessories(store, keys, say)
         finally:
             await store.close()
         say(f"[tags] {len(accessories)} accessory/ies decrypted from the account")

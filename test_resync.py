@@ -203,6 +203,37 @@ class CloudKitIdentityTest(unittest.TestCase):
         self.assertIs(tag_keys.for_cloudkit(real), real)
 
 
+class ReadAccessoriesTest(unittest.TestCase):
+    def test_reports_counts_and_says_which_beacons_are_devices(self):
+        import tag_keys
+        from unittest.mock import AsyncMock, MagicMock
+
+        tag = SimpleNamespace(record_type="MasterBeaconRecord", name="t", values={
+            "model": "", "privateKey": b"k", "sharedSecret2": b"s"})
+        phone = SimpleNamespace(record_type="MasterBeaconRecord", name="p", values={
+            "model": "iPhone15,2", "secureLocationsSharedSecret": b"s"})
+        decrypted = type("D", (list,), {})([tag, phone])
+        decrypted.skipped = {"no key held": 1}
+        store = MagicMock()
+        store.zone_keys = AsyncMock(return_value=["zk"])
+        store.fetch_records = AsyncMock(return_value=[tag, phone, SimpleNamespace(record_type="Other", name="x")])
+        store.zone_record_defaults = AsyncMock(return_value=[])
+        said = []
+        with patch("findmy.cloudkit.beacons.decrypt_records", return_value=decrypted), \
+                patch("findmy.cloudkit.beacons.group_records",
+                      return_value=[SimpleNamespace(beacon=tag, naming=None), SimpleNamespace(beacon=phone, naming=None)]), \
+                patch("findmy.cloudkit.beacons.accessories_from_records", return_value=["acc"]):
+            result = asyncio.run(tag_keys.read_accessories(store, ["k"], said.append))
+        text = "\n".join(said)
+        self.assertEqual(result, ["acc"])
+        self.assertIn("fetched 3 BeaconStore record(s)", text)
+        self.assertIn("1 x Other", text)
+        self.assertIn("no key held", text)
+        self.assertIn("private key=yes", text)
+        self.assertIn("private key=NO", text)
+        self.assertNotIn("b'k'", text)
+
+
 class TagKeysTest(unittest.TestCase):
     """The passcode guard rails, with the keychain and CloudKit replaced by fakes."""
 
@@ -218,7 +249,6 @@ class TagKeysTest(unittest.TestCase):
         session.pcs_keys = AsyncMock(return_value=[object()])
         session.close = AsyncMock()
         store = MagicMock()
-        store.fetch_accessories = AsyncMock(return_value=[])
         store.close = AsyncMock()
         asked, said = [], []
         replies = iter(answers)
@@ -234,7 +264,8 @@ class TagKeysTest(unittest.TestCase):
             return "123456"
 
         with patch("findmy.keychain.session.AsyncKeychainSession.open", AsyncMock(return_value=session)), \
-                patch("findmy.cloudkit.AsyncBeaconStore", return_value=store):
+                patch("findmy.cloudkit.AsyncBeaconStore", return_value=store), \
+                patch.object(tag_keys, "read_accessories", AsyncMock(return_value=[])):
             try:
                 code = asyncio.run(tag_keys.run(SimpleNamespace(device_uuid="12345678-1234-5678-1234-567812345678"), list_only=list_only, ask=ask,
                                                 ask_secret=ask_secret, say=said.append))
