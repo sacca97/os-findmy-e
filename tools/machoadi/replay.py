@@ -55,8 +55,13 @@ async def main() -> int:
                 URL, auth=(session["dsid"], session["searchPartyToken"]),
                 headers=headers, json=FETCH_BODIES[URL])
             age = time.time() - born
-            print(f"machine age {age:7.0f} s   acsnservice -> {response.status_code}  {len(response.content)} bytes",
-                  flush=True)
+            # Control: the same request with the last token character changed. It has to be 401.
+            token = session["searchPartyToken"]
+            bad = await account._http.post(
+                URL, auth=(session["dsid"], token[:-1] + ("A" if token[-1] != "A" else "B")),
+                headers=await account.get_anisette_headers(), json=FETCH_BODIES[URL])
+            print(f"machine age {age:7.0f} s   acsnservice -> {response.status_code}  {len(response.content)} bytes"
+                  f"   (bad-token control -> {bad.status_code})", flush=True)
             if i + 1 < args.count:
                 await asyncio.sleep(args.interval)
     finally:
