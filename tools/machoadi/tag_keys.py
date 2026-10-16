@@ -6,8 +6,8 @@ account object, not just the saved search-party token.
 Path (all read-only; the library's `recover_service_keys` docstring: "nothing is created, signed or enrolled"):
 
   1. `AsyncKeychainSession.recovery_options()`: lists the escrow records the account holds. No passcode.
-  2. YOU pick the record of a device whose screen-lock passcode you know, and type that passcode (hidden).
-     It is the screen-lock passcode (PIN or Mac login password) of THAT device, not the Apple ID password.
+  2. The record is chosen for you when there is only one (otherwise you pick); you type that device's passcode
+     (hidden). It is the screen-lock passcode (PIN or Mac login password) of THAT device, not the Apple ID password.
   3. `recover()` opens the escrowed peer, `pcs_keys()` reads the keychain's key material,
      `AsyncBeaconStore.fetch_accessories()` decrypts the BeaconStore records into accessories (your tags).
   4. Each accessory's locations are fetched with the library's own fetcher and printed locally.
@@ -16,8 +16,8 @@ The one thing NOT done: `AsyncKeychainSession.join()`. It is the library's only 
 the keychain circle and an escrow record nothing displays) and its own docstring says reading does not need it.
 
 Guard rails
-  * The passcode is asked for once, only after you confirm the device by typing YES. A wrong passcode is NOT
-    retried: Apple's escrow normally limits wrong guesses, so the script stops at the first failure.
+  * The passcode is asked for once. A wrong passcode is NOT retried: Apple's escrow normally limits wrong
+    guesses, so the script stops at the first failure.
   * `--tags-list` stops after step 1 (no passcode is ever requested).
   * Nothing secret is printed or logged. `--tags-save FILE` writes the accessories (their master keys are
     secrets) to FILE with mode 0600 so later fetches need no passcode.
@@ -132,17 +132,17 @@ async def run(account, *, list_only: bool = False, save: str | None = None, days
             say("[tags] nothing recoverable: no device on this account can be recovered from")
             return 1
 
-        choice = ask("Record number to recover from (the device whose screen-lock passcode you know): ").strip()
-        if not choice.isdigit() or int(choice) >= len(records):
-            say("[tags] not a valid record number; nothing was sent")
-            return 1
-        record = records[int(choice)]
-        say(f"[tags] chosen: {_describe(record)}")
-        say("[tags] This asks Apple to check ONE passcode guess against that device's escrow record. "
-            "A wrong guess counts against a limit and is not retried here.")
-        if ask("Type YES to continue: ").strip() != "YES":
-            say("[tags] cancelled; nothing was sent")
-            return 1
+        if len(records) == 1:
+            record = records[0]
+        else:
+            choice = ask("Record number to recover from (the device whose screen-lock passcode you know): ").strip()
+            if not choice.isdigit() or int(choice) >= len(records):
+                say("[tags] not a valid record number; nothing was sent")
+                return 1
+            record = records[int(choice)]
+        say(f"[tags] recovering from: {_describe(record)}")
+        say("[tags] One passcode guess is sent and it is not retried: a wrong guess counts against Apple's limit "
+            "on that device's escrow record.")
         passcode = ask_secret("Screen-lock passcode of that device (hidden): ")
         try:
             peer = await session.recover(record, passcode)

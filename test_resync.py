@@ -237,14 +237,14 @@ class ReadAccessoriesTest(unittest.TestCase):
 class TagKeysTest(unittest.TestCase):
     """The passcode guard rails, with the keychain and CloudKit replaced by fakes."""
 
-    def run_flow(self, answers, *, list_only=False, recover_fails=False):
+    def run_flow(self, answers, *, list_only=False, recover_fails=False, several=False):
         import tag_keys
         from unittest.mock import AsyncMock, MagicMock
 
         record = SimpleNamespace(describe=lambda: "iPhone 15 (record)", device_name="iPhone")
         session = MagicMock()
         session.recovery_options = AsyncMock(return_value=SimpleNamespace(
-            recoverable=[record], described_but_not_viable=[]))
+            recoverable=[record, record] if several else [record], described_but_not_viable=[]))
         session.recover = AsyncMock(side_effect=RuntimeError("wrong passcode") if recover_fails else None)
         session.pcs_keys = AsyncMock(return_value=[object()])
         session.close = AsyncMock()
@@ -279,26 +279,27 @@ class TagKeysTest(unittest.TestCase):
         self.assertEqual(secrets_asked, [])
         session.recover.assert_not_called()
 
-    def test_anything_but_YES_sends_nothing(self):
-        code, session, secrets_asked, _ = self.run_flow(["0", "yes"])
+    def test_single_record_is_chosen_without_a_question_and_asks_only_for_the_passcode(self):
+        code, session, secrets_asked, _ = self.run_flow([])
+        self.assertEqual(code, 0)
+        self.assertEqual(len(secrets_asked), 1)
+        session.recover.assert_awaited_once()
+
+    def test_bad_record_number_sends_nothing_when_there_are_several(self):
+        code, session, secrets_asked, _ = self.run_flow(["7"], several=True)
         self.assertEqual(code, 1)
         self.assertEqual(secrets_asked, [])
         session.recover.assert_not_called()
 
-    def test_bad_record_number_sends_nothing(self):
-        code, session, secrets_asked, _ = self.run_flow(["7"])
-        self.assertEqual(code, 1)
-        session.recover.assert_not_called()
-
     def test_wrong_passcode_is_tried_exactly_once_and_not_retried(self):
-        code, session, secrets_asked, _ = self.run_flow(["0", "YES"], recover_fails=True)
+        code, session, secrets_asked, _ = self.run_flow([], recover_fails=True)
         self.assertEqual(len(secrets_asked), 1)
         self.assertEqual(session.recover.await_count, 1)
         self.assertIn("raised", str(code))
         session.close.assert_awaited()
 
-    def test_confirmed_flow_never_joins(self):
-        code, session, secrets_asked, said = self.run_flow(["0", "YES"])
+    def test_flow_never_joins(self):
+        code, session, secrets_asked, said = self.run_flow([])
         self.assertEqual(code, 0)
         session.recover.assert_awaited_once()
         session.join.assert_not_called()

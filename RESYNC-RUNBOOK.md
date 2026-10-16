@@ -92,8 +92,7 @@ so only the first run logs in; later runs use `tools/restored_run.sh` with no lo
     # 4b. the real thing, on the saved login. Have the passcode of the chosen device ready; asked ONCE, never retried.
     tools/restored_run.sh /tmp/macadi/rt1 --tags --tags-save /tmp/macadi/rt1-tags.json
 
-In 4b the script lists the records, asks which one, shows the device, and asks you to type `YES` before it asks for the
-passcode. A wrong passcode counts against Apple's guess limit on that device's escrow record, so on the first failure it
+In 4b the script lists the records, picks the only one (or asks which), shows the device, and asks for the passcode. A wrong passcode counts against Apple's guess limit on that device's escrow record, so on the first failure it
 stops. `--tags-save` keeps the decrypted accessories (their master keys are secrets, file mode 0600) so later fetches
 need no passcode and no keychain at all.
 

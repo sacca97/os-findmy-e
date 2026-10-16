@@ -89,7 +89,7 @@ tools/aged_login.sh /tmp/macadi/NAME --tags --tags-list    # login once; lists r
 tools/restored_run.sh /tmp/macadi/NAME --tags --tags-save /tmp/macadi/NAME-tags.json
 ```
 
-The second command lists the devices, asks which one, asks you to type `YES`, and only then asks for the passcode, once. A wrong passcode is **never retried**, because Apple limits wrong guesses on a device's escrow record. `--tags-save` writes the decrypted tags (their master keys are secrets) with mode 0600, so that later fetches need no passcode. This route has not run against Apple to the end yet.
+The second command lists the devices (with one device it picks it for you; with several it asks which) and asks for the passcode, once. A wrong passcode is **never retried**, because Apple limits wrong guesses on a device's escrow record. `--tags-save` writes the decrypted tags (their master keys are secrets) with mode 0600, so that later fetches need no passcode. This route has not run against Apple to the end yet.
 
 ## How it works
 
