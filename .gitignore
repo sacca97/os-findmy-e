@@ -1,0 +1,7 @@
+.venv/
+.state*
+__pycache__/
+opentagviewer/
+ext/
+dump-*
+tools/winadi/*.exe
