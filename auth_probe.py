@@ -233,15 +233,23 @@ async def watch_token(account, state, token, seconds, interval=10, other_after=4
 
 
 async def authenticate(account, directory, client_info=None, sms=None, save_session=None, reports=False,
-                       watch=0, machine_state=None, watch_interval=10, watch_other_after=40):
+                       watch=0, machine_state=None, watch_interval=10, watch_other_after=40,
+                       request_push=False):
     try:
         save_identity(account, directory)
-        email = input("Apple ID: ").strip()
-        password = getpass.getpass("Password: ")
+        # tools/login.sh asks for these *before* it provisions the machine and passes them in the
+        # environment, so no typing time is spent inside the machine's 60 s window.
+        email = os.environ.pop("APPLE_ID", None) or input("Apple ID: ").strip()
+        password = os.environ.pop("APPLE_PASSWORD", None) or getpass.getpass("Password: ")
         try:
             state = await account.login(email, password)
         finally:
             del password
+        if state == LoginState.REQUIRE_2FA:
+            # What Apple says it will do, so a missing code can be told from a request never made.
+            info = getattr(account, "_account_info", None) or {}
+            print("[2fa] Apple offers:", "a trusted-device code" if info.get("trusted_device_2fa")
+                  else "no trusted-device code (SMS only)", flush=True)
         if state == LoginState.REQUIRE_2FA and sms is not None:
             # SMS instead of the trusted-device push, for an account whose devices show no prompt.
             # Ask for the code only after the request is sent, so the window since provisioning is
@@ -256,6 +264,13 @@ async def authenticate(account, directory, client_info=None, sms=None, save_sess
             # get_2fa_methods() also fetches the SMS page, which can fail with 401 if the machine's window has lapsed.
             # Use the trusted-device push method directly; no SMS request is ever sent.
             method = AsyncTrustedDeviceSecondFactor(account)
+            if request_push:
+                # Normally Apple pushes at the 409. This asks again, and reports what Apple answered.
+                try:
+                    await method.request()
+                    print("[2fa] push requested: accepted by Apple", flush=True)
+                except Exception as error:  # noqa: BLE001 - report, then still wait for a code
+                    print(f"[2fa] push request failed: {type(error).__name__}: {error}", flush=True)
             # No method.request(): Apple already pushed the prompt when "complete" returned hsc 409,
             # and the extra td_2fa_request GET fails with 401 (seen 2026-10-14).
             print("Apple has pushed a prompt to your other devices. Tap Allow, then enter the code.")
@@ -316,6 +331,8 @@ def main():
     parser.add_argument("--watch-other-after", type=int, default=40, metavar="SECONDS",
                         help="during --watch, provision a second machine once the first is SECONDS old and "
                         "send the same token with its headers (default 40)")
+    parser.add_argument("--request-push", action="store_true",
+                        help="on 2FA by trusted device, also ask Apple to send the prompt again and print its answer")
     parser.add_argument("--reports", action="store_true",
                         help="after login, fetch location reports for the private key in $FINDMY_KEY (base64)")
     parser.add_argument("--macadi", type=Path, metavar="STATE",
@@ -344,7 +361,7 @@ def main():
             trace_requests(account, client_info)
             return await authenticate(account, args.state_dir, client_info, args.sms,
                                       args.save_session, args.reports, args.watch, args.macadi,
-                                      args.watch_interval, args.watch_other_after)
+                                      args.watch_interval, args.watch_other_after, args.request_push)
         return asyncio.run(run())
     except KeyboardInterrupt:
         return 130

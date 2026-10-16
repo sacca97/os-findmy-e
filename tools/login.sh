@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Provision a fresh Mac Anisette machine and log in at once.
 #
-# The login must start within about 60 s of the provisioning, so both steps run in one script.
+# The login must start within about 60 s of the provisioning, so both steps run in one script and the
+# Apple ID and password are asked for first.
 # Usage: tools/login.sh [NAME] [--2fa device|sms] [extra auth_probe.py args...]
 #   NAME   state name; files go to /tmp/macadi/NAME, /tmp/macadi/NAME-auth and
 #          /tmp/macadi/session-NAME.json (default: login3)
@@ -29,11 +30,18 @@ esac
 name="${positional[0]:-login3}"
 extra=("${positional[@]:1}")
 
+# Ask for the credentials first. A fresh machine is only accepted for about 60 s after provisioning,
+# so no typing may happen between the provisioning and the login. They go to auth_probe.py in the
+# environment of that one command (never argv, never a file) and it removes them once read.
+if [ -z "${APPLE_ID:-}" ]; then read -r -p "Apple ID: " APPLE_ID; fi
+if [ -z "${APPLE_PASSWORD:-}" ]; then read -r -s -p "Password: " APPLE_PASSWORD; echo; fi
+
 state="/tmp/macadi/$name"
 rm -rf "$state" "$state-auth"
 mkdir -p /tmp/macadi
 
 .venv/bin/python tools/machoadi/mac_anisette.py provision --state "$state"
-.venv/bin/python auth_probe.py --macadi "$state" --state-dir "$state-auth" \
+APPLE_ID="$APPLE_ID" APPLE_PASSWORD="$APPLE_PASSWORD" \
+  .venv/bin/python auth_probe.py --macadi "$state" --state-dir "$state-auth" \
   ${tfa_args[@]+"${tfa_args[@]}"} \
   --save-session "/tmp/macadi/session-$name.json" ${extra[@]+"${extra[@]}"}

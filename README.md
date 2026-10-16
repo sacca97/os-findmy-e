@@ -24,7 +24,7 @@ python3 -m venv .venv
 tools/login.sh                               # enrol a machine and log in
 ```
 
-`tools/login.sh` asks for the Apple ID, the password and the 2FA code. By default the code comes from a trusted Apple device. Use `--2fa sms` to get it by SMS to the first phone number. Have the device or phone in your hand before you start, because the code step must finish while the machine is still accepted.
+`tools/login.sh` asks for the Apple ID and the password first, and then provisions the machine, so typing does not use up the 60 seconds. It then asks for the 2FA code. By default the code comes from a trusted Apple device. Use `--2fa sms` to get it by SMS to the first phone number. Have the device or phone in your hand before you start, because the code step must finish while the machine is still accepted.
 
 ## Test the token
 

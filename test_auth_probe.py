@@ -97,5 +97,49 @@ class LoggedInPathTest(unittest.TestCase):
             self.assertEqual(session.stat().st_mode & 0o777, 0o600)
 
 
+
+class SecondFactorTest(unittest.TestCase):
+    def test_device_2fa_reports_what_apple_offers_and_the_push_answer(self):
+        account = SimpleNamespace(
+            dsid="123", close=AsyncMock(), get_anisette_headers=AsyncMock(return_value={}),
+            _http=SimpleNamespace(post=AsyncMock(return_value=SimpleNamespace(
+                status_code=200, content=b"x", headers={}))),
+            _account_info={"trusted_device_2fa": True},
+            _login_state_data={"mobileme_data": {"tokens": {"searchPartyToken": "tok123"}}},
+            login=AsyncMock(return_value=LoginState.REQUIRE_2FA),
+            td_2fa_request=AsyncMock(side_effect=RuntimeError("refused")),
+            td_2fa_submit=AsyncMock(return_value=LoginState.LOGGED_IN),
+            to_json=lambda: (_ for _ in ()).throw(NotImplementedError()))
+        output = io.StringIO()
+        with tempfile.TemporaryDirectory() as directory, \
+                patch("builtins.input", return_value="123456"), \
+                patch("getpass.getpass", return_value="fake password"), \
+                redirect_stdout(output):
+            code = asyncio.run(auth_probe.authenticate(
+                account, Path(directory), None, None, None, False, 0, None, 10, 40, True))
+        text = output.getvalue()
+        self.assertEqual(code, 0)
+        self.assertIn("Apple offers: a trusted-device code", text)
+        self.assertIn("push request failed: RuntimeError: refused", text)
+        account.td_2fa_submit.assert_awaited_once()
+
+
+
+class CredentialsFromEnvironmentTest(unittest.TestCase):
+    def test_credentials_in_the_environment_are_used_and_removed(self):
+        account = SimpleNamespace(
+            login=AsyncMock(return_value=LoginState.LOGGED_OUT), close=AsyncMock(),
+            to_json=lambda: (_ for _ in ()).throw(NotImplementedError()))
+        with tempfile.TemporaryDirectory() as directory, \
+                patch.dict("os.environ", {"APPLE_ID": "env@example.invalid", "APPLE_PASSWORD": "env pw"}), \
+                patch("builtins.input", side_effect=AssertionError("must not prompt")), \
+                patch("getpass.getpass", side_effect=AssertionError("must not prompt")):
+            asyncio.run(auth_probe.authenticate(account, Path(directory)))
+            import os
+            self.assertNotIn("APPLE_PASSWORD", os.environ)
+            self.assertNotIn("APPLE_ID", os.environ)
+        account.login.assert_awaited_once_with("env@example.invalid", "env pw")
+
+
 if __name__ == "__main__":
     unittest.main()
