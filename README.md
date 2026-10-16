@@ -17,11 +17,12 @@ It does not break anything: the account password, the 2FA code and (for tag keys
 | Works | Not shown yet |
 | --- | --- |
 | Full login with SRP and 2FA (trusted-device push or SMS) | A real location report from a tag |
-| Service tokens, including `searchPartyToken` | A longer test: hours or days, more than one account or machine |
+| Service tokens, including `searchPartyToken` | Creating certificates, App IDs or profiles, or installing an app; a longer test (hours or days); more than one account or machine |
 | A fresh machine is accepted for at least 4 minutes (credential-free probe, real clock) | How long a machine and a token last beyond about 30 minutes |
 | `acsnservice` accepts the token with its own machine's headers 16 minutes after provisioning (`200`, bad-token control `401`) | Whether the token survives hours or days |
 | A login on a machine 29 minutes old completed and asked for no second 2FA (seen once) | |
 | Saving a login and restoring it later with no login and no 2FA | Restoring after the tokens have aged |
+| The sideloading read path: the Xcode app token and the developer API's `listTeams` (1 team returned) | |
 | Answering Apple's resync (`hsc 434`) turns a refused machine into an accepted one (`resync.py`, seen once) | |
 
 **The key finding.** For days the machine was accepted for only about a minute after provisioning and then refused with `-22421`. The cause was in our emulation, not in Apple's rules: CoreADI's clock was frozen at one date, so the one-time code (OTP) never changed. With the real clock a fresh machine is still accepted after 4 minutes, a token still works at 16 minutes, and a login at 29 minutes completed. Apple's resync handshake (the `-22421` / `hsc 434` answer and the SRM reply) also works; it is the repair path if a machine does lapse. The real clock is the default now. `ADI_FROZEN_TIME=1` brings the old behaviour back. See `EVIDENCE.md`, sections 6 to 9.
@@ -123,6 +124,17 @@ This route ran to the end once, on one account: it listed the account's iPhone a
 | BeaconStore | The CloudKit zone where Find My keeps your tags' keys, encrypted with iCloud Keychain keys |
 | Master key | A tag's secret. The tag broadcasts rotating public keys derived from it, and location reports are encrypted to those keys |
 
+## Sideloading check (read-only)
+
+Sideloading tools (AltStore, SideStore, iloader, xtool) need two things after the login: an Xcode **app token**, and the developer-services API. `-22411` is reported at the app-token step (SideStore#1658, isideload#27). This check does both, read-only; nothing is created:
+
+```bash
+tools/aged_login.sh /tmp/macadi/NAME --dev-check --dev-save /tmp/macadi/NAME-xcode.json   # fresh login: app token + listTeams
+tools/restored_run.sh /tmp/macadi/NAME --dev-from /tmp/macadi/NAME-xcode.json              # later: listTeams on the saved token, no login
+```
+
+The first needs a **fresh login** (a new 2FA push), because the app token is signed with the login's session key, which a saved login does not keep. It prints only status codes, never tokens. Seen once on one account: Apple accepts the app-token request, and `listTeams` returns the account's team. The developer API needs an **Xcode** client info (with the Anisette's akd one it answers `resultCode 1100` "session expired"). Creating certificates, App IDs or profiles, and installing apps, were not tried. The saved token file is a credential (mode 0600); its own expiry field said about a year.
+
 ## How it works
 
 1. The tool gets the URL bag from `gsa.apple.com` and starts the machine provisioning.
@@ -152,7 +164,7 @@ This route ran to the end once, on one account: it listed the account's iPhone a
 | `tools/fetch_tag.sh` | Fetch one tag's reports with a key you have |
 | `tools/machoadi/resync.py`, `cooldown.py` | Answer Apple's resync; the shared 429 cooldown |
 | `tools/machoadi/age_check.py`, `replay.py`, `fetch_reports.py` | Age probe, token replay, report fetch and decrypt |
-| `tools/machoadi/login_store.py`, `tag_keys.py` | Saved logins; tag keys from the account |
+| `tools/machoadi/login_store.py`, `tag_keys.py`, `dev_check.py` | Saved logins; tag keys from the account; the sideloading check |
 | `tools/machoadi/` | Mach-O loader, Unicorn harness, Grand Slam client, mac anisette and the rest of the emulation |
 | `tools/fetch_mac_coreadi.py` | Downloads CoreADI from iTunes 12.8.3 |
 | `EVIDENCE.md` | What we measured, with the tests that show it |

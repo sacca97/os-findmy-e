@@ -159,6 +159,22 @@ Fetching with the saved tags (no passcode): the iPhone returned 0 reports, the S
 within the previous half hour, accuracy 52 to 102 m. So the library's AirTag key derivation works for this tracker.
 Coordinates are not recorded here.
 
+## 11. The developer API accepts the emulated machine
+
+`auth_probe.py --dev-check`, fresh login with 2FA, real clock, made-up device values; then `--dev-from` with the saved token and no new login.
+
+| Step | Result |
+| --- | --- |
+| `apptokens` for `com.apple.gs.xcode.auth` | `ec 0`, `hsc 200` |
+| decrypt the returned token (AES-GCM, key `sk`) | works; the plaintext is a bare `<dict>` plist |
+| `listTeams`, client info as the Anisette gives it (`com.apple.akd`) | HTTP 200, `resultCode 1100` "Your session has expired" |
+| `listTeams`, client info presenting Xcode | HTTP 200, `resultCode 0`, 1 team |
+
+`-22411` is reported at the app-token step by other sideloading users (SideStore#1658, isideload#27); the emulated machine passed it. The `1100`
+was not an expired session: the developer API answers it when the client info does not look like Xcode, the mirror image of the login endpoint,
+which drops Xcode client info and wants akd. The token's own expiry field said about a year. One account, one run. Not tried: creating App IDs,
+certificates or profiles, registering a device, installing an app.
+
 ## Open questions
 
 - **How long does it last now?** Beyond about 30 minutes, with the real clock: hours, days? A single replay an hour later tells.

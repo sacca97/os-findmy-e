@@ -234,6 +234,137 @@ class ReadAccessoriesTest(unittest.TestCase):
         self.assertNotIn("b'k'", text)
 
 
+class DevCheckTest(unittest.TestCase):
+    def setUp(self):
+        import dev_check
+        self.dev = dev_check
+        dev_check._captured.clear()
+
+    def test_checksum_is_hmac_sha256_over_apptokens_adsid_app(self):
+        import hashlib
+        import hmac
+        sk = b"k" * 32
+        expect = hmac.new(sk, b"apptokens" + b"123456" + b"com.apple.gs.xcode.auth", hashlib.sha256).digest()
+        self.assertEqual(self.dev.checksum(sk, "123456"), expect)
+
+    def test_et_roundtrip_and_bad_layout(self):
+        import os
+        import plistlib
+        from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+        sk, iv = os.urandom(32), os.urandom(16)
+        plain = plistlib.dumps({"t": {"com.apple.gs.xcode.auth": {"token": "TOK"}}})
+        enc = Cipher(algorithms.AES(sk), modes.GCM(iv)).encryptor()
+        enc.authenticate_additional_data(b"XYZ")
+        body = enc.update(plain) + enc.finalize()
+        blob = b"XYZ" + iv + body + enc.tag
+        self.assertEqual(self.dev.decrypt_et(sk, blob)["t"]["com.apple.gs.xcode.auth"]["token"], "TOK")
+        with self.assertRaises(ValueError):
+            self.dev.decrypt_et(sk, b"nope" * 10)
+
+    def run_check(self, reply, spd=None):
+        from unittest.mock import AsyncMock
+        self.dev._captured["spd"] = spd if spd is not None else {
+            "adsid": "A1", "GsIdmsToken": "IDMS", "sk": b"s" * 32, "c": b"cookie"}
+        sent = []
+
+        async def gsa(params):
+            sent.append(params)
+            return reply
+
+        account = SimpleNamespace(_gsa_request=gsa, get_anisette_headers=AsyncMock(return_value={}),
+                                  _http=SimpleNamespace(post=AsyncMock()))
+        said = []
+        code = asyncio.run(self.dev.run(account, said.append))
+        return code, sent, "\n".join(said), account
+
+    def test_refusal_22411_is_reported_as_the_known_failure_point(self):
+        code, sent, text, account = self.run_check({"Status": {"ec": -22411, "hsc": 200, "em": "x"}})
+        self.assertEqual(code, 1)
+        self.assertIn("-22411", text)
+        self.assertEqual(sent[0]["o"], "apptokens")
+        self.assertEqual(sent[0]["u"], "A1")
+        self.assertEqual(sent[0]["app"], ["com.apple.gs.xcode.auth"])
+        account._http.post.assert_not_awaited()
+
+    def test_accepted_but_undecryptable_stops_after_the_verdict_and_leaks_nothing(self):
+        code, sent, text, account = self.run_check({"Status": {"ec": 0}, "et": b"garbage-garbage-garbage-garbage"})
+        self.assertEqual(code, 0)
+        self.assertIn("ACCEPTED", text)
+        self.assertIn("could not be decrypted", text)
+        for secret in ("IDMS", "cookie", "ssss"):
+            self.assertNotIn(secret, text)
+        account._http.post.assert_not_awaited()
+
+    def test_full_path_accepts_decrypts_and_counts_teams_without_printing_the_token(self):
+        import os
+        import plistlib
+        from unittest.mock import AsyncMock
+        from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+        sk, iv = b"s" * 32, os.urandom(16)
+        plain = plistlib.dumps({"t": {"com.apple.gs.xcode.auth": {"token": "SECRETTOKEN", "expiry": 1}}})
+        enc = Cipher(algorithms.AES(sk), modes.GCM(iv)).encryptor()
+        enc.authenticate_additional_data(b"XYZ")
+        et = b"XYZ" + iv + enc.update(plain) + enc.finalize() + enc.tag
+        self.dev._captured["spd"] = {"adsid": "A1", "GsIdmsToken": "IDMS", "sk": sk, "c": b"cookie"}
+
+        async def gsa(params):
+            return {"Status": {"ec": 0}, "et": et}
+
+        listed = SimpleNamespace(status_code=200, content=plistlib.dumps({"teams": [{"x": 1}, {"x": 2}], "resultCode": 0}))
+        post = AsyncMock(return_value=listed)
+        account = SimpleNamespace(_gsa_request=gsa, get_anisette_headers=AsyncMock(return_value={"X-Apple-Locale": "en_US"}),
+                                  _http=SimpleNamespace(post=post))
+        said = []
+        self.assertEqual(asyncio.run(self.dev.run(account, said.append)), 0)
+        headers = post.await_args.kwargs["headers"]
+        self.assertEqual(headers["X-Apple-GS-Token"], "SECRETTOKEN")        # sent to Apple ...
+        self.assertEqual(headers["X-Apple-I-Identity-Id"], "A1")
+        self.assertNotIn("SECRETTOKEN", "\n".join(said))                    # ... never printed
+        self.assertIn("teams: 2", "\n".join(said))
+
+    def test_plaintext_without_an_xml_header_is_accepted(self):
+        import plistlib
+        body = plistlib.dumps({"t": {"a": {"token": "T"}}}, fmt=plistlib.FMT_XML)
+        headerless = body[body.index(b"<dict>"):body.rindex(b"</plist>")]   # a bare <dict> root, like the login's spd
+        with self.assertRaises(plistlib.InvalidFileException):
+            plistlib.loads(headerless)                         # the failure seen against Apple
+        self.assertEqual(self.dev.parse_plain(headerless)["t"]["a"]["token"], "T")
+        self.assertEqual(self.dev.parse_plain(body)["t"]["a"]["token"], "T")
+
+    def test_replay_tries_variants_until_one_works_and_never_prints_the_token(self):
+        import json
+        import plistlib
+        from unittest.mock import AsyncMock
+        path = Path(tempfile.mkdtemp()) / "x.json"
+        self.dev.save_token(path, "SECRETTOKEN", "A1", 123)
+        self.assertEqual(path.stat().st_mode & 0o777, 0o600)
+        answers = iter([
+            SimpleNamespace(status_code=200, content=plistlib.dumps({"resultCode": 1100, "resultString": "expired"})),
+            SimpleNamespace(status_code=200, content=plistlib.dumps({"resultCode": 0, "teams": [{"a": 1}]})),
+            SimpleNamespace(status_code=200, content=plistlib.dumps({"resultCode": 0, "teams": [{"a": 1}]})),
+        ])
+        sent = []
+
+        async def post(url, **kw):
+            sent.append(kw["headers"])
+            return next(answers)
+
+        account = SimpleNamespace(dsid="999", get_anisette_headers=AsyncMock(return_value={
+            "X-MMe-Client-Info": "akd-info", "X-Apple-Locale": "en_US"}), _http=SimpleNamespace(post=post))
+        said = []
+        self.assertEqual(asyncio.run(self.dev.replay(account, str(path), said.append)), 0)
+        self.assertEqual(len(sent), 2)                                        # stopped at the first success
+        self.assertIn("com.apple.dt.Xcode", sent[0]["X-MMe-Client-Info"])    # Xcode is the default
+        self.assertEqual(sent[1]["X-MMe-Client-Info"], "akd-info")           # the contrast variant
+        self.assertNotIn("SECRETTOKEN", "\n".join(said))
+        self.assertIn("teams: 1", "\n".join(said))
+
+    def test_missing_spd_keys_are_named_not_guessed(self):
+        code, _, text, _ = self.run_check({"Status": {"ec": 0}}, spd={"adsid": "A1"})
+        self.assertEqual(code, 1)
+        self.assertIn("sk=NO", text)
+
+
 class SavedTagsTest(unittest.TestCase):
     def test_saved_accessories_load_and_are_fetched_without_any_keychain(self):
         import tag_keys

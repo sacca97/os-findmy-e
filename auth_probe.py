@@ -476,6 +476,15 @@ def main():
                         help="after login: read the keychain (asks which device's screen-lock passcode to use), "
                         "decrypt your tags from the account and fetch their locations; read-only, never joins "
                         "the keychain circle (tools/machoadi/tag_keys.py)")
+    parser.add_argument("--dev-check", action="store_true",
+                        help="after a fresh login: the app-token request and one read-only developer call "
+                        "(listTeams), the steps sideloading tools need (tools/machoadi/dev_check.py)")
+    parser.add_argument("--dev-save", metavar="FILE",
+                        help="with --dev-check: save the Xcode app token (0600, a credential) so --dev-from can "
+                        "reuse it without a new login")
+    parser.add_argument("--dev-from", metavar="FILE",
+                        help="with --restore-login: call listTeams with a token saved by --dev-save, trying the "
+                        "header variants that could explain 'session expired'. No login, no GSA request")
     parser.add_argument("--tags-from", metavar="FILE",
                         help="with --restore-login: fetch the locations of the accessories saved by --tags-save. "
                         "No keychain, no escrow, no passcode")
@@ -489,6 +498,15 @@ def main():
     args = parser.parse_args()
     if args.restore_login and not args.macadi:
         parser.error("--restore-login needs --macadi")
+    if args.dev_save and not args.dev_check:
+        parser.error("--dev-save needs --dev-check")
+    if args.dev_from and not args.restore_login:
+        parser.error("--dev-from needs --restore-login (tools/restored_run.sh)")
+    if args.dev_from and (args.dev_check or args.tags or args.tags_from):
+        parser.error("--dev-from is its own mode; use it alone")
+    if args.dev_check and args.restore_login:
+        parser.error("--dev-check needs a fresh login: the app token is signed with the login's session key, "
+                     "which a saved login does not keep")
     if args.tags_from and not args.restore_login:
         parser.error("--tags-from needs --restore-login (tools/restored_run.sh)")
     if args.tags_from and args.tags:
@@ -536,6 +554,22 @@ def main():
 
                 async def after_login(logged_in):
                     return await fetch_saved(logged_in, args.tags_from)
+            if args.dev_check:
+                import dev_check
+
+                dev_check.install_spd_capture()  # before the login: the final spd is only visible while it runs
+                previous = after_login
+
+                async def after_login(logged_in):
+                    code = await dev_check.run(logged_in, save=args.dev_save)
+                    if previous is not None:
+                        code = await previous(logged_in) or code
+                    return code
+            if args.dev_from:
+                import dev_check
+
+                async def after_login(logged_in):
+                    return await dev_check.replay(logged_in, args.dev_from)
             resyncer = None
             if args.auto_resync:
                 from resync import Resyncer
@@ -543,7 +577,7 @@ def main():
                 resyncer.preflight = args.preflight
                 install_auto_resync(account, resyncer)
             if args.restore_login:
-                return await run_restored(account, args.macadi, resyncer, after_login, needs_password=not args.tags_from)
+                return await run_restored(account, args.macadi, resyncer, after_login, needs_password=not (args.tags_from or args.dev_from))
             return await authenticate(account, args.state_dir, client_info, args.sms,
                                       args.save_session, args.reports, args.watch, args.macadi,
                                       args.watch_interval, args.watch_other_after, not args.no_request_push,
