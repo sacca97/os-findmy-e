@@ -210,7 +210,7 @@ async def watch_token(account, state, token, seconds, interval=10):
 
 
 async def authenticate(account, directory, client_info=None, sms=None, save_session=None, reports=False,
-                       watch=0, state=None, watch_interval=10):
+                       watch=0, machine_state=None, watch_interval=10):
     try:
         save_identity(account, directory)
         email = input("Apple ID: ").strip()
@@ -251,7 +251,7 @@ async def authenticate(account, directory, client_info=None, sms=None, save_sess
                                "saved_at": datetime.now(timezone.utc).isoformat()}, stream)
                 print("session saved (0600):", path, flush=True)
             if watch:
-                await watch_token(account, state, tokens["searchPartyToken"], watch, watch_interval)
+                await watch_token(account, machine_state, tokens["searchPartyToken"], watch, watch_interval)
             if reports:
                 # The private key comes from the environment so it is in no argv and no file.
                 key = KeyPair.from_b64(os.environ["FINDMY_KEY"])

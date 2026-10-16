@@ -47,5 +47,48 @@ class AuthenticationTest(unittest.TestCase):
         self.assertIn("-80045", output.getvalue())
 
 
+class LoggedInPathTest(unittest.TestCase):
+    """The branch that only runs after a successful login: probe, save-session and --watch.
+
+    A real run costs a login and an SMS code, so this exercises that branch with fakes. It once
+    failed because `authenticate` reused the name `state` for both the login result and the
+    machine's state directory.
+    """
+
+    def test_watch_and_save_session_after_login(self):
+        statuses = []
+
+        async def post(url, auth=None, headers=None, json=None):
+            statuses.append(auth[1])
+            return SimpleNamespace(status_code=401 if auth[1].endswith(("A", "B")) else 200, content=b"x", headers={})
+
+        def fake_account():
+            return SimpleNamespace(
+                dsid="123", close=AsyncMock(), get_anisette_headers=AsyncMock(return_value={}),
+                _http=SimpleNamespace(post=post),
+                _login_state_data={"mobileme_data": {"tokens": {"searchPartyToken": "tok123"}}},
+                login=AsyncMock(return_value=LoginState.LOGGED_IN),
+                to_json=lambda: (_ for _ in ()).throw(NotImplementedError()))
+
+        with tempfile.TemporaryDirectory() as directory:
+            machine = Path(directory) / "machine"
+            (machine / "store").mkdir(parents=True)
+            (machine / "store" / "adi.pb").write_bytes(b"x")
+            session = Path(directory) / "session.json"
+            output = io.StringIO()
+            with patch("builtins.input", return_value="fake@example.invalid"), \
+                    patch("getpass.getpass", return_value="fake password"), \
+                    patch.object(auth_probe, "make_mac_account", return_value=fake_account()), \
+                    redirect_stdout(output):
+                code = asyncio.run(auth_probe.authenticate(
+                    fake_account(), Path(directory) / "state", None, None, str(session), False,
+                    1, machine, 1))
+            self.assertEqual(code, 0)
+            self.assertIn("[watch]", output.getvalue())
+            self.assertIn("bad 401", output.getvalue())
+            self.assertEqual(json.loads(session.read_text())["searchPartyToken"], "tok123")
+            self.assertEqual(session.stat().st_mode & 0o777, 0o600)
+
+
 if __name__ == "__main__":
     unittest.main()
