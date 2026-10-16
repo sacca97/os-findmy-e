@@ -37,7 +37,7 @@ S=/tmp/macadi/login; rm -rf $S $S-auth
 .venv/bin/python auth_probe.py --macadi $S --state-dir $S-auth
 ```
 
-Add `--sms` to `auth_probe.py` to get the code by SMS. The tool asks for the Apple ID and the password. Do not put them in a file or in the command line.
+The 2FA code comes from a trusted device by default. Add `--2fa sms` to `tools/login.sh` (or `--sms` to `auth_probe.py`) to get the code by SMS. The tool asks for the Apple ID and the password. Do not put them in a file or in the command line.
 
 ## Error codes
 

@@ -2,20 +2,38 @@
 # Provision a fresh Mac Anisette machine and log in at once.
 #
 # The login must start within about 60 s of the provisioning, so both steps run in one script.
-# Usage: tools/login.sh [NAME] [extra auth_probe.py args...]
+# Usage: tools/login.sh [NAME] [--2fa device|sms] [extra auth_probe.py args...]
 #   NAME   state name; files go to /tmp/macadi/NAME, /tmp/macadi/NAME-auth and
 #          /tmp/macadi/session-NAME.json (default: login3)
-# Example: FINDMY_KEY='<base64 private key>' tools/login.sh login3 --reports
+#   --2fa  second factor: "device" (default) takes the code from a trusted Apple device,
+#          "sms" sends it to the account's first phone number
+# Example: FINDMY_KEY='<base64 private key>' tools/login.sh login3 --2fa sms --reports
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
-name="${1:-login3}"
-[ $# -gt 0 ] && shift
+
+tfa=device
+positional=()
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --2fa) [ $# -ge 2 ] || { echo "--2fa needs device or sms" >&2; exit 2; }; tfa="$2"; shift 2 ;;
+    *) positional+=("$1"); shift ;;
+  esac
+done
+case "$tfa" in
+  device) tfa_args=() ;;
+  sms) tfa_args=(--sms) ;;
+  *) echo "unknown --2fa value: $tfa (use device or sms)" >&2; exit 2 ;;
+esac
+
+name="${positional[0]:-login3}"
+extra=("${positional[@]:1}")
 
 state="/tmp/macadi/$name"
 rm -rf "$state" "$state-auth"
 mkdir -p /tmp/macadi
 
 .venv/bin/python tools/machoadi/mac_anisette.py provision --state "$state"
-.venv/bin/python auth_probe.py --macadi "$state" --state-dir "$state-auth" --sms \
-  --save-session "/tmp/macadi/session-$name.json" "$@"
+.venv/bin/python auth_probe.py --macadi "$state" --state-dir "$state-auth" \
+  ${tfa_args[@]+"${tfa_args[@]}"} \
+  --save-session "/tmp/macadi/session-$name.json" ${extra[@]+"${extra[@]}"}

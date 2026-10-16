@@ -24,14 +24,14 @@ python3 -m venv .venv
 tools/login.sh                               # enrol a machine and log in
 ```
 
-`tools/login.sh` asks for the Apple ID, the password and the SMS code. It must run in one go, because the login has to start within 60 seconds of the enrolment.
+`tools/login.sh` asks for the Apple ID, the password and the 2FA code. By default the code comes from a trusted Apple device. Use `--2fa sms` to get it by SMS to the first phone number. Have the device or phone in your hand before you start, because the code step must finish while the machine is still accepted.
 
 ## Test the token
 
 Run the whole experiment with one command:
 
 ```bash
-[FINDMY_KEY='<base64 private key>'] tools/flow_test.sh
+[FINDMY_KEY='<base64 private key>'] tools/flow_test.sh [--2fa device|sms]
 ```
 
 The script does four things:

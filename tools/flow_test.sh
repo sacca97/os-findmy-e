@@ -7,7 +7,9 @@
 #      a second machine provisioned then;
 #   3. replay the saved token with a second, freshly provisioned machine.
 #
-# Usage: [FINDMY_KEY='<base64 private key>'] tools/flow_test.sh [NAME] [WATCH_SECONDS] [INTERVAL_SECONDS]
+# Usage: [FINDMY_KEY='<base64 private key>'] tools/flow_test.sh [--2fa device|sms] [NAME] [WATCH_SECONDS] [INTERVAL_SECONDS]
+#   --2fa  second factor: "device" (default) takes the code from a trusted Apple device,
+#          "sms" sends it to the account's first phone number
 #   defaults: NAME=flow, WATCH_SECONDS=120, INTERVAL_SECONDS=5
 # Reading the output:
 #   live 200, clean 401 ........ the token needs the live session; a saved token alone is not enough
@@ -19,17 +21,25 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
-name="${1:-flow}"
-watch="${2:-120}"
-interval="${3:-5}"
+tfa=device
+positional=()
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --2fa) [ $# -ge 2 ] || { echo "--2fa needs device or sms" >&2; exit 2; }; tfa="$2"; shift 2 ;;
+    *) positional+=("$1"); shift ;;
+  esac
+done
+name="${positional[0]:-flow}"
+watch="${positional[1]:-120}"
+interval="${positional[2]:-5}"
 
 # With FINDMY_KEY set (base64 private key of one of your own tags), also fetch its reports.
 extra=()
 [ -n "${FINDMY_KEY:-}" ] && extra+=(--reports)
 
 echo "== 1/2  enrol and log in, then watch for ${watch}s every ${interval}s"
-tools/login.sh "$name" --watch "$watch" --watch-interval "$interval" "${extra[@]}"
+tools/login.sh "$name" --2fa "$tfa" --watch "$watch" --watch-interval "$interval" ${extra[@]+"${extra[@]}"}
 
 echo
 echo "== 2/2  same token, second machine provisioned just now"
-tools/replay_fresh.sh "/tmp/opencode/session-$name.json" 4 "$interval"
+tools/replay_fresh.sh "/tmp/macadi/session-$name.json" 4 "$interval"
