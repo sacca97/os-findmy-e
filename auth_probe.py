@@ -8,6 +8,7 @@ import json
 import os
 import platform
 import shutil
+import time
 import sys
 import plistlib
 from pathlib import Path
@@ -99,7 +100,12 @@ def describe_delegates(response):
                       for name, d in delegates.items()}}, default=str), flush=True)
 
 
-def trace_requests(account, client_info=None):
+def machine_born(state):
+    """Unix time the machine's store was written, i.e. when it was provisioned."""
+    return max(p.stat().st_mtime for p in (Path(state) / "store").glob("adi*.pb"))
+
+
+def trace_requests(account, client_info=None, born=None):
     post = account._http.post
     request = account._gsa_request
 
@@ -112,6 +118,9 @@ def trace_requests(account, client_info=None):
                 headers = kwargs["headers"] = {**headers, "X-MMe-Client-Info": client_info}
             print("[request]", json.dumps({
                 "operation": body.get("o"),
+                # Seconds since the machine was provisioned: the machine is only accepted for a short
+                # time, and the request after the 2FA code is the one a slow human can push past it.
+                **({"machine_age_s": round(time.time() - born)} if born else {}),
                 "client_info": headers.get("X-MMe-Client-Info"),
                 "user_agent": headers.get("User-Agent"),
                 "client_time": cpd.get("X-Apple-I-Client-Time"),
@@ -178,6 +187,14 @@ async def probe_fetch(account, client_info):
                 "token": token_name, "endpoint": url.rsplit("/", 2)[-2], "status": response.status_code,
                 "bytes": len(response.content),
                 "www-authenticate": dict(response.headers).get("WWW-Authenticate")}), flush=True)
+
+
+def _age(machine_state):
+    """Age of the machine in seconds, for messages; '?' when there is no machine directory."""
+    try:
+        return round(time.time() - machine_born(machine_state))
+    except (OSError, ValueError, TypeError):
+        return "?"
 
 
 async def watch_token(account, state, token, seconds, interval=10, other_after=40):
@@ -259,6 +276,7 @@ async def authenticate(account, directory, client_info=None, sms=None, save_sess
             method = phones[sms]
             await method.request()
             print(f"SMS requested for number {sms}.", flush=True)
+            print(f"[2fa] the machine is {_age(machine_state)} s old; type the code at once.", flush=True)
             state = await method.submit(input("SMS code: ").strip())
         elif state == LoginState.REQUIRE_2FA:
             # get_2fa_methods() also fetches the SMS page, which can fail with 401 if the machine's window has lapsed.
@@ -274,6 +292,8 @@ async def authenticate(account, directory, client_info=None, sms=None, save_sess
             # No method.request(): Apple already pushed the prompt when "complete" returned hsc 409,
             # and the extra td_2fa_request GET fails with 401 (seen 2026-10-14).
             print("Apple has pushed a prompt to your other devices. Tap Allow, then enter the code.")
+            print(f"[2fa] the machine is {_age(machine_state)} s old; the code must be accepted within about "
+                  "40 s of provisioning, so type it as soon as you have it.", flush=True)
             state = await method.submit(input("2FA code: ").strip())
         print("Login state:", state.name)
         if state == LoginState.LOGGED_IN:
@@ -358,7 +378,7 @@ def main():
             client_info = args.client_info
             if args.consistent_user_agent:
                 account_module._GSA_USER_AGENT = account._anisette.akd_user_agent
-            trace_requests(account, client_info)
+            trace_requests(account, client_info, machine_born(args.macadi) if args.macadi else None)
             return await authenticate(account, args.state_dir, client_info, args.sms,
                                       args.save_session, args.reports, args.watch, args.macadi,
                                       args.watch_interval, args.watch_other_after, args.request_push)

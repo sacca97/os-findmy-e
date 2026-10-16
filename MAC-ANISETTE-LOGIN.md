@@ -39,6 +39,14 @@ S=/tmp/macadi/login; rm -rf $S $S-auth
 
 The 2FA code comes from a trusted device by default. Add `--2fa sms` to `tools/login.sh` (or `--sms` to `auth_probe.py`) to get the code by SMS. The tool asks for the Apple ID and the password. Do not put them in a file or in the command line.
 
+## Time budget for 2FA
+
+The library signs in again after you enter the 2FA code: a second `init` and a second `complete`. The second `complete` only works while the machine is young, about 40 seconds after provisioning. If you are slower, Apple answers `-22406` ("Enter the correct password"), even when the password is correct.
+
+- Use `--2fa sms` when you can. The code arrives in seconds.
+- With a device code, keep the device unlocked and type the code at once.
+- Each request in the log shows `machine_age_s`. A `complete` with an age above about 40 is the likely cause of a false `-22406`.
+
 ## Error codes
 
 | Code | Meaning |
