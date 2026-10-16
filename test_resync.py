@@ -183,6 +183,26 @@ class FetchReportsTest(unittest.TestCase):
         self.assertEqual(fetch_reports.parse_payload({}), (None, []))
 
 
+class CloudKitIdentityTest(unittest.TestCase):
+    def test_a_provisioning_udid_is_replaced_by_the_host_uuid_for_cloudkit_only(self):
+        import uuid as uuid_module
+        import tag_keys
+
+        real = SimpleNamespace(device_uuid="00006000-0123456789ABCDEF", dsid="1",
+                               _anisette=SimpleNamespace(identity_json={"host_uuid": "ab" * 16}))
+        with self.assertRaises(ValueError):  # what the library did with the real value
+            uuid_module.UUID(real.device_uuid)
+        wrapped = tag_keys.for_cloudkit(real)
+        self.assertEqual(uuid_module.UUID(wrapped.device_uuid).hex, "ab" * 16)
+        self.assertEqual(wrapped.dsid, "1")                                   # forwarded
+        self.assertEqual(real.device_uuid, "00006000-0123456789ABCDEF")       # the real account is untouched
+
+    def test_a_valid_uuid_is_left_alone(self):
+        import tag_keys
+        real = SimpleNamespace(device_uuid="12345678-1234-5678-1234-567812345678")
+        self.assertIs(tag_keys.for_cloudkit(real), real)
+
+
 class TagKeysTest(unittest.TestCase):
     """The passcode guard rails, with the keychain and CloudKit replaced by fakes."""
 
@@ -216,7 +236,7 @@ class TagKeysTest(unittest.TestCase):
         with patch("findmy.keychain.session.AsyncKeychainSession.open", AsyncMock(return_value=session)), \
                 patch("findmy.cloudkit.AsyncBeaconStore", return_value=store):
             try:
-                code = asyncio.run(tag_keys.run(SimpleNamespace(), list_only=list_only, ask=ask,
+                code = asyncio.run(tag_keys.run(SimpleNamespace(device_uuid="12345678-1234-5678-1234-567812345678"), list_only=list_only, ask=ask,
                                                 ask_secret=ask_secret, say=said.append))
             except RuntimeError as error:
                 code = f"raised {error}"

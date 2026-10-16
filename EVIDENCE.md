@@ -126,12 +126,13 @@ Fresh machine `rt1` (new device ID), real clock, throwaway account. Ages are sec
 | credential-free `init`, no resync ever sent | 4, 46, 101, 161, 241 s | `-20970`, `hsc 200` every time |
 | `acsnservice` replay with this machine's headers, no resync | 943 s | `200`, 33 bytes; bad-token control `401` |
 | second login on the same machine | 1734 s | completed; no second 2FA prompt (one observation) |
+| saved login restored: token check on `acsnservice`, then a password-equivalent token renewal (`init`, `complete`) | 4478 s | `200`; `ec 0` twice, no 2FA demanded |
 
 Under the frozen clock the same kind of machine was refused from about 74 seconds in every timeline (section 1). The
 only difference between the two arms is the time the library reads. The frozen clock was the cause of the lease.
 
 **Limits.** One machine. Only the first line of the 12-request replay was recorded. Not shown: any age beyond about
-30 minutes, a token that survives hours or days, a real location report, and the keychain route for tag keys (the first
+75 minutes, a token that survives hours or days, a real location report, and the keychain route for tag keys (the first
 try stopped at an HTTP 429, after roughly 25 requests in half an hour).
 
 ## Open questions
@@ -141,3 +142,4 @@ try stopped at an HTTP 429, after roughly 25 requests in half an hour).
 - **Does a saved login keep working?** `tools/restored_run.sh` checks the token with one request and says when to log in again.
 - **Do the identity and claim variants matter inside the window?** We measured most of them outside it, so those results do not apply.
 - **What happens on the account side?** Each login adds a fake Mac to the device list. We did not count them.
+

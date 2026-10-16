@@ -28,7 +28,44 @@ from __future__ import annotations
 import getpass
 import json
 import os
+import uuid
 from pathlib import Path
+
+
+class CloudKitIdentity:
+    """The account, except that `device_uuid` is a real UUID, for the CloudKit clients only.
+
+    The library's CloudKit client does `uuid.UUID(account.device_uuid)` and sends the value as CloudKit's
+    device identifier. A Mac's `X-Mme-Device-Id` is the provisioning UDID (`00006000-` + 16 hex), which is not a
+    UUID, so the client raised `ValueError: badly formed hexadecimal UUID string` before sending anything.
+    CloudKit's identifier is a different thing from that header; the machine's host UUID (the IOPlatformUUID
+    analogue our identity already carries) is the natural value. Everything else is forwarded to the real
+    account, so the GSA requests, tokens and PET renewals still use the real `X-Mme-Device-Id`.
+    """
+
+    def __init__(self, account, device_uuid: str) -> None:  # noqa: ANN001
+        self._account = account
+        self._device_uuid = device_uuid
+
+    @property
+    def device_uuid(self) -> str:
+        return self._device_uuid
+
+    def __getattr__(self, name: str):  # noqa: ANN204
+        return getattr(self._account, name)
+
+
+def for_cloudkit(account):  # noqa: ANN001, ANN201
+    """`account`, or a CloudKitIdentity over it when its device id is not a UUID."""
+    try:
+        uuid.UUID(account.device_uuid)
+        return account
+    except ValueError:
+        pass
+    host = getattr(getattr(account, "_anisette", None), "identity_json", {}).get("host_uuid")
+    if not host:
+        raise SystemExit("this account's device id is not a UUID and no host UUID is known to use instead")
+    return CloudKitIdentity(account, str(uuid.UUID(host)).upper())
 
 
 def _describe(record) -> str:  # noqa: ANN001
@@ -44,7 +81,8 @@ async def run(account, *, list_only: bool = False, save: str | None = None, days
     from findmy.keychain import session as ks  # noqa: PLC0415
 
     say("[tags] opening the keychain session (read-only)")
-    session = await ks.AsyncKeychainSession.open(account)
+    ck_account = for_cloudkit(account)
+    session = await ks.AsyncKeychainSession.open(ck_account)
     try:
         options = await session.recovery_options()
         records = list(options.recoverable)
@@ -79,7 +117,7 @@ async def run(account, *, list_only: bool = False, save: str | None = None, days
 
         keys = await session.pcs_keys(peer)
         say(f"[tags] {len(keys)} elliptic-curve key(s) read from the keychain views")
-        store = AsyncBeaconStore(account)
+        store = AsyncBeaconStore(ck_account)
         try:
             accessories = await store.fetch_accessories(keys)
         finally:
