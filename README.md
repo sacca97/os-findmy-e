@@ -4,11 +4,13 @@ This project logs in to an Apple Account on Linux. It gets the machine proof (An
 
 ## Status
 
-| Works | Not proven |
+| Works | Does not work |
 | --- | --- |
-| Full login with SRP and 2FA (SMS or trusted device) | A saved token used later or from a second machine |
-| Service tokens, including `searchPartyToken` | Real location reports from a tag (needs a tag key) |
-| `acsnservice` accepts the token (`200`, empty result) | Anything about long-term use |
+| Full login with SRP and 2FA (SMS or trusted device) | Using the token later: the machine's headers stop working after about 30 to 85 seconds |
+| Service tokens, including `searchPartyToken` | Using the token with a different machine: it is bound to the machine that logged in |
+| `acsnservice` accepts the token (`200`, empty result) while that machine is young | A persistent session: every use needs a new machine, a new login and a new 2FA |
+
+Not tested: real location reports from a tag (needs a tag key).
 
 The key finding: Apple accepts a new machine for about **60 seconds** after provisioning. After that it refuses the machine with `-22421`. Earlier work blamed the identity, the library build and the model claim. They had no effect. See `EVIDENCE.md`.
 

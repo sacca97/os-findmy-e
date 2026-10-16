@@ -59,7 +59,7 @@ The library signs in again after you enter the 2FA code: a second `init` and a s
 
 ## Not known
 
-- Whether a saved token works after the 60-second window.
+- Whether anything makes the machine's registration last longer. A token works only with its own machine, for about 30 to 85 seconds.
 - Whether a real location request returns data.
 - How many devices the account shows after each login. Remove the fake Macs from the device list.
 

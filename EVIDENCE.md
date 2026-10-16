@@ -66,9 +66,31 @@ HTTP 429 is the real rate limit. It comes from the edge as an HTML page, and it 
 - On macOS 26.7.1 there is no CoreADI library. The ADI code is in a daemon (`adid`) with no exported dispatcher. The harness cannot call it.
 - A current Mac stores its ADI data as one version-2 `adi.pb` file in `/private/var/db/fpsd/adi/`. Version 4.19 and version 15.8.1 write a version-1 `adi.pb` and a per-user file. We did not need the newer format.
 
+## 6. The token is bound to its machine, and the machine lapses within about a minute
+
+`tools/flow_test.sh` logs in, then sends the same `acsnservice` request every few seconds by four routes:
+`live` (the logged-in account), `clean` (a new account with only the saved token), `bad` (a changed token,
+the control) and `other` (a second machine, provisioned when the first is about 42 s old, with the same token).
+
+| Run | Age of the first machine | `live` / `clean` | `bad` | `other` |
+| --- | --- | --- | --- | --- |
+| 1 | 8 s, 29 s | 200 / 200 | 401 | |
+| 1 | 50 s, 71 s | 401 / 401 | 401 | |
+| 2 | 17 s to 78 s | 200 / 200 | 401 | 401 |
+| 2 | 85 s, 91 s | 401 / 401 | 401 | 401 |
+
+**Result:**
+- `bad` is `401`, so the `200` values are real.
+- `live` and `clean` always agree. A saved token replays correctly.
+- `other` gives `401` while the first machine still gives `200`. The token is bound to the machine that made it. A new machine cannot use it.
+- The first machine stops working after 29 to 50 s in run 1 and 78 to 85 s in run 2. Requests every 6 s did not extend it. We do not know what sets the length.
+
+A token from this method works only with its own machine, for about 30 to 85 seconds. Every use needs a new machine, a new login and a new 2FA. This is not a persistent session.
+
 ## Open questions
 
-- **Does the token work later or from another machine?** Two replays gave `401`: one with the aged login machine (63 seconds old) and one with a new machine. The tests did not separate machine age, machine binding and session context. `tools/flow_test.sh` is the test for this. It includes a negative control (a changed token must give `401`).
+- **Why does the machine lapse?** Does anything renew it or make it permanent? A real client keeps its registration, so the emulation may lack a step or attested data.
+- **Do other lineages last longer?** The Android library is the obvious comparison. A credential-free `init` probe at growing ages shows it without a login.
 - **Does a real location report come back?** This needs the private key of a tag you own. Use `FINDMY_KEY` with `tools/flow_test.sh`.
-- **Do the identity and claim variants matter inside the 60 seconds?** We measured most of them outside the window, so the results do not apply.
+- **Do the identity and claim variants matter inside the window?** We measured most of them outside it, so those results do not apply.
 - **What happens on the account side?** Each login adds a fake Mac to the device list. We did not count them.
