@@ -85,12 +85,59 @@ the control) and `other` (a second machine, provisioned when the first is about 
 - `other` gives `401` while the first machine still gives `200`. The token is bound to the machine that made it. A new machine cannot use it.
 - The first machine stops working after 29 to 50 s in run 1 and 78 to 85 s in run 2. Requests every 6 s did not extend it. We do not know what sets the length.
 
-A token from this method works only with its own machine, for about 30 to 85 seconds. Every use needs a new machine, a new login and a new 2FA. This is not a persistent session.
+A token from this method works only with its own machine, and with the frozen clock that machine lapsed after 30 to 85 seconds. **Sections 8 and 9 show that the lapse was the frozen clock.** The token is still bound to its machine.
+
+## 7. `-22421` is Apple asking for a resync, and the machine can answer
+
+Dumping the whole `Status` of a `-22421` refusal (earlier probes printed only `ec`, `em` and `hsc`) shows:
+
+    hsc 434, ec -22421, X-Apple-I-MD-DATA: <base64, 36 bytes>, X-Apple-I-MD-Cmd-Target: native
+
+`X-Apple-I-MD-DATA` is absent from accepted (`-20970`) answers and differs on every refusal. Public reverse-engineering
+notes (Blackwood-4NT, unofficial) call `hsc 434` "Anisette Resync Required: headers have expired" and this field the SIM
+for `ADISynchronize`. The decompiled `akd` (macOS 15) shows the reply: it posts to the URL bag's `midSyncMachine`.
+
+| Step | Result |
+| --- | --- |
+| `init` on an aged machine | `hsc 434`, `ec -22421`, SIM present |
+| CoreADI `Synchronize(SIM)` | `ret 0`, MID unchanged (60 bytes), SRM 121 bytes, store unchanged |
+| `POST midSyncMachine` with only `{"srm": ...}` | HTTP 200, empty body (no verdict) |
+| the same with `X-Apple-I-MD-M` and the plist envelope, as `akd` builds it | `ec 0` |
+| `init` afterwards | `-20970`, `hsc 200`: accepted again, twice in a row |
+
+**Limits.** One machine. After this single resync the machine was refused again within minutes.
+
+## 8. With a frozen clock the OTP is a constant
+
+The emulation ran CoreADI with `gettimeofday` frozen at 1700000000. `mac_anisette.py headers` in two separate processes
+32 s apart gave the identical OTP. With the real clock the OTP differs in every 30-second window. A real client's OTP
+changes every 30 seconds.
+
+Also, `machine age` in `replay.py` and `--watch` was measured from the store files' mtime, which every OTP rewrites. It
+therefore counted from the last OTP (after login and 2FA) and not from provisioning. The lease numbers of section 6 are
+too short by the length of the login. `identity.json` now records `provisioned_at`.
+
+## 9. With the real clock the machine, the token and a login last
+
+Fresh machine `rt1` (new device ID), real clock, throwaway account. Ages are seconds since provisioning.
+
+| Test | Age | Result |
+| --- | --- | --- |
+| credential-free `init`, no resync ever sent | 4, 46, 101, 161, 241 s | `-20970`, `hsc 200` every time |
+| `acsnservice` replay with this machine's headers, no resync | 943 s | `200`, 33 bytes; bad-token control `401` |
+| second login on the same machine | 1734 s | completed; no second 2FA prompt (one observation) |
+
+Under the frozen clock the same kind of machine was refused from about 74 seconds in every timeline (section 1). The
+only difference between the two arms is the time the library reads. The frozen clock was the cause of the lease.
+
+**Limits.** One machine. Only the first line of the 12-request replay was recorded. Not shown: any age beyond about
+30 minutes, a token that survives hours or days, a real location report, and the keychain route for tag keys (the first
+try stopped at an HTTP 429, after roughly 25 requests in half an hour).
 
 ## Open questions
 
-- **Why does the machine lapse?** Does anything renew it or make it permanent? A real client keeps its registration, so the emulation may lack a step or attested data.
-- **Do other lineages last longer?** The Android library is the obvious comparison. A credential-free `init` probe at growing ages shows it without a login.
-- **Does a real location report come back?** This needs the private key of a tag you own. Use `FINDMY_KEY` with `tools/flow_test.sh`.
+- **How long does it last now?** Beyond about 30 minutes, with the real clock: hours, days? A single replay an hour later tells.
+- **Does a real location report come back?** This needs the private key of a tag you own: `tools/fetch_tag.sh`, or from the account with `tag_keys.py` (needs a device passcode). Neither has run to the end against Apple.
+- **Does a saved login keep working?** `tools/restored_run.sh` checks the token with one request and says when to log in again.
 - **Do the identity and claim variants matter inside the window?** We measured most of them outside it, so those results do not apply.
 - **What happens on the account side?** Each login adds a fake Mac to the device list. We did not count them.

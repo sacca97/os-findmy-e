@@ -4,15 +4,17 @@ This project logs in to an Apple Account on Linux. It gets the machine proof (An
 
 ## Status
 
-| Works | Does not work |
+| Works | Not shown yet |
 | --- | --- |
-| Full login with SRP and 2FA (SMS or trusted device) | Using the token later: the machine's headers stop working after about 30 to 85 seconds |
-| Service tokens, including `searchPartyToken` | Using the token with a different machine: it is bound to the machine that logged in |
-| `acsnservice` accepts the token (`200`, empty result) while that machine is young | A persistent session: every use needs a new machine, a new login and a new 2FA |
+| Full login with SRP and 2FA (trusted-device push or SMS) | A real location report from a tag |
+| Service tokens, including `searchPartyToken` | The tag keys from the account (keychain route): the first try stopped at an HTTP 429 before it got that far |
+| A fresh machine is accepted for at least 4 minutes (credential-free probe, real clock) | How long a machine and a token last beyond about 30 minutes |
+| `acsnservice` accepts the token with its own machine's headers 16 minutes after provisioning (`200`, bad-token control `401`) | Whether the token survives hours or days |
+| A login on a machine 29 minutes old completed and asked for no second 2FA (seen once) | |
+| Saving a login and restoring it later with no login and no 2FA | Restoring after the tokens have aged |
+| Answering Apple's resync (`hsc 434`) turns a refused machine into an accepted one (`resync.py`, seen once) | |
 
-Not tested: real location reports from a tag (needs a tag key).
-
-The key finding: Apple accepts a new machine for about **60 seconds** after provisioning. After that it refuses the machine with `-22421`. Earlier work blamed the identity, the library build and the model claim. They had no effect. See `EVIDENCE.md`.
+**The key finding.** For days the machine was accepted for only about a minute after provisioning and then refused with `-22421`. The cause was in our emulation, not in Apple's rules: CoreADI's clock was frozen at one date, so the one-time code (OTP) never changed. With the real clock a fresh machine is still accepted after 4 minutes, a token still works at 16 minutes, and a login at 29 minutes completed. Apple's resync handshake (the `-22421` / `hsc 434` answer and the SRM reply) also works; it is the repair path if a machine does lapse. The real clock is the default now. `ADI_FROZEN_TIME=1` brings the old behaviour back. See `EVIDENCE.md`, sections 6 to 9.
 
 ## Quick start
 
@@ -23,66 +25,107 @@ python3 -m venv .venv
 .venv/bin/python -m pip install -r requirements.txt
 .venv/bin/python -m unittest                 # offline tests
 .venv/bin/python tools/fetch_mac_coreadi.py  # downloads iTunes 12.8.3 and unpacks CoreADI into ext/
-tools/login.sh                               # enrol a machine and log in
+tools/login.sh NAME                          # make a machine and log in
 ```
 
-`tools/login.sh` asks for the Apple ID and the password first, and then provisions the machine, so typing does not use up the 60 seconds. It then asks for the 2FA code. By default the code comes from a trusted Apple device. Use `--2fa sms` to get it by SMS to the first phone number. Have the device or phone in your hand before you start, because the code step must finish while the machine is still accepted.
+`tools/login.sh` asks for the Apple ID and the password first, then provisions the machine, then asks for the 2FA code. By default the code comes from a trusted Apple device, and the push prompt is requested for you. Use `--2fa sms` to get the code by SMS instead. The state goes to `/tmp/macadi/NAME`.
+
+To log in again on a machine that already exists, with the login saved for later:
+
+```bash
+tools/aged_login.sh /tmp/macadi/NAME [--2fa device|sms]
+```
+
+This writes `/tmp/macadi/NAME-login.json` (see **Saved logins** below) and `/tmp/macadi/NAME-session.json`.
+
+## Saved logins
+
+`tools/aged_login.sh` saves the login by default. `tools/restored_run.sh` uses it with **no Apple ID prompt, no password prompt and no 2FA code**:
+
+```bash
+tools/restored_run.sh /tmp/macadi/NAME [--tags ...]
+```
+
+It first sends one request with the saved token to see that it still works. If Apple refuses it, the script says so and tells you to log in again.
+
+**The saved file is a credential.** It holds the service tokens and, unless you pass `--no-save-login` (or `--no-save-password` to `auth_probe.py`), your Apple ID password in clear text, with mode 0600. It only works with the machine that made it: a file saved on a different machine is refused. Delete it when you are done: `rm /tmp/macadi/NAME-login.json`.
 
 ## Test the token
 
-Run the whole experiment with one command:
+Replay the saved token with the machine that logged in. Do not use a new machine: a token only works with the headers of the machine that made it.
 
 ```bash
-[FINDMY_KEY='<base64 private key>'] tools/flow_test.sh [--2fa device|sms]
+tools/replay_aged.sh /tmp/macadi/NAME 12 30 0     # 12 requests, 30 s apart, no resync
+tools/replay_aged.sh /tmp/macadi/NAME 12 30 45    # with a resync every 45 s
 ```
 
-The script does four things:
-
-1. It enrols a fresh machine and logs in.
-2. For 4 minutes, every 20 seconds, it sends one Find My request three ways: `live` (the logged-in session), `clean` (only the saved token) and `bad` (a changed token, the control).
-3. It replays the saved token on a second machine that it enrols just now.
-4. If `FINDMY_KEY` is set, it fetches location reports for that tag. Use the base64 private key of **your own** tag.
-
-How to read the output:
+Each line shows the machine age (seconds since provisioning), the status and a bad-token control, which must be `401`. For any answer other than `200` it prints Apple's headers and the start of the body, and says whether the answer carries a resync request.
 
 | Output | Meaning |
 | --- | --- |
-| `bad` is `401` | The control works. A `200` elsewhere is meaningful. |
-| `bad` is `200` | The endpoint accepts anything. The other results prove nothing. |
-| `live` 200, `clean` 401 | The token needs the live session. |
-| Both 200, then both 401 at about 70 s | The 60-second machine window also limits fetches. |
-| Replay on the second machine gives `401` | The token belongs to the machine that logged in. |
-| `[reports] count: N`, N above 0 | Real reports came back. This is the strong proof. |
+| Control `401`, everything else `200` | The `200` values are real. |
+| Control `200` | The endpoint accepts anything. The other results prove nothing. |
+| `200`, then `401` at some age | The machine lapsed at that age. Note it. |
+| `401` from the first line | The token itself is refused. |
 
-The individual steps are `tools/login.sh [NAME] [--watch S] [--reports]`, `tools/replay_fresh.sh` and `tools/machoadi/replay.py`.
+`tools/flow_test.sh` is the older all-in-one experiment (fresh machine, login, watch, replay on a second machine). `tools/machoadi/age_check.py` asks `init` at growing ages with a synthetic account and no login.
+
+## Your tags
+
+There are two ways to get a tag's location. Use only tags that you own.
+
+**With a key you already have** (for example exported from a Mac), the base64 private key of the tag:
+
+```bash
+tools/fetch_tag.sh /tmp/macadi/NAME --dry-run     # checks the inputs, sends nothing
+tools/fetch_tag.sh /tmp/macadi/NAME --summary     # counts only
+tools/fetch_tag.sh /tmp/macadi/NAME               # the last 20 decrypted reports
+```
+
+**With the key from the account.** Apple stores the tag keys end-to-end encrypted in CloudKit, protected by iCloud Keychain keys. `tools/machoadi/tag_keys.py` reads them with the library's read-only path. It needs the **screen-lock passcode of one of your devices** (PIN or Mac login password), and it does not join the keychain circle:
+
+```bash
+tools/aged_login.sh /tmp/macadi/NAME --tags --tags-list    # login once; lists recoverable devices; no passcode
+tools/restored_run.sh /tmp/macadi/NAME --tags --tags-save /tmp/macadi/NAME-tags.json
+```
+
+The second command lists the devices, asks which one, asks you to type `YES`, and only then asks for the passcode, once. A wrong passcode is **never retried**, because Apple limits wrong guesses on a device's escrow record. `--tags-save` writes the decrypted tags (their master keys are secrets) with mode 0600, so that later fetches need no passcode. This route has not run against Apple to the end yet.
 
 ## How it works
 
 1. The tool gets the URL bag from `gsa.apple.com` and starts the machine provisioning.
 2. CoreADI makes a response from Apple's challenge. The tool sends it. Apple returns the provisioning data.
-3. CoreADI makes a one-time code (OTP) and a machine ID. They go into the `X-Apple-I-MD` headers.
+3. CoreADI makes a one-time code (OTP) and a machine ID. They go into the `X-Apple-I-MD` headers. The OTP depends on the clock, so the emulated clock has to be the real one.
 4. The tool does the SRP `init` and `complete` requests, then 2FA. Apple returns the tokens.
+5. If Apple answers `hsc 434` with `X-Apple-I-MD-DATA`, the tool runs CoreADI's `Synchronize` on that data and posts the result to `midSyncMachine` (`tools/machoadi/resync.py`).
 
-`MAC-ANISETTE-LOGIN.md` has the details and the error codes.
+`MAC-ANISETTE-LOGIN.md` has the details and the error codes. `RESYNC-RUNBOOK.md` has the order of the post-cooldown experiments.
 
 ## Safety
 
-- Use a **throwaway Apple Account**. Each login adds a fake Mac to the account's device list. Remove them after the tests.
-- Apple rate-limits repeated logins with HTTP 429. Wait at least an hour, and do not retry in a loop.
-- Apple allows one provisioning for each device ID. A second one returns HTTP 433. Use a new state name for each run.
-- Never share state directories, session files, tokens, passwords, 2FA codes or tag keys. `tools/login.sh` writes the session to `/tmp/macadi/session-NAME.json` with mode 0600.
+- Use a **throwaway Apple Account** for experiments. Each login adds a fake Mac to the account's device list. Remove them after the tests.
+- Apple rate-limits with HTTP 429, and it did so after roughly 25 requests in half an hour. Every tool here records a 429 in `/tmp/macadi/gsa-429` and refuses to talk to Apple for 45 minutes. Check with `.venv/bin/python tools/machoadi/cooldown.py`. The first 429 stops a run, and nothing is retried.
+- Apple allows one provisioning for each device ID, and also for each machine. A second one returns HTTP 433 even with a fresh ID.
+- The keychain route spends a device passcode guess. Type it carefully and only once.
+- Never share state directories, session files, saved logins, tokens, passwords, passcodes, 2FA codes or tag keys.
 
 ## Repository map
 
 | Path | Content |
 | --- | --- |
-| `auth_probe.py` | Login, 2FA, token tests (`--macadi STATE`, `--sms`, `--watch`, `--reports`) |
-| `tools/login.sh`, `flow_test.sh`, `replay_fresh.sh` | The scripts above |
-| `tools/machoadi/` | Mach-O loader (`macho.py`), Unicorn harness (`harness.py`, `stubs.py`, `adi_run.py`), machine provisioning (`mac_anisette.py`, `gsa.py`), `findmy` provider, replay tool |
+| `auth_probe.py` | Login, 2FA, token tests, `--save-login`, `--restore-login`, `--auto-resync`, `--tags` |
+| `tools/login.sh`, `aged_login.sh`, `restored_run.sh` | Make a machine and log in; log in on an existing machine; use a saved login |
+| `tools/replay_aged.sh`, `replay_fresh.sh`, `flow_test.sh` | Token tests |
+| `tools/fetch_tag.sh` | Fetch one tag's reports with a key you have |
+| `tools/machoadi/resync.py`, `cooldown.py` | Answer Apple's resync; the shared 429 cooldown |
+| `tools/machoadi/age_check.py`, `replay.py`, `fetch_reports.py` | Age probe, token replay, report fetch and decrypt |
+| `tools/machoadi/login_store.py`, `tag_keys.py` | Saved logins; tag keys from the account |
+| `tools/machoadi/` | Mach-O loader, Unicorn harness, Grand Slam client, mac anisette and the rest of the emulation |
 | `tools/fetch_mac_coreadi.py` | Downloads CoreADI from iTunes 12.8.3 |
-| `EVIDENCE.md` | What we measured, and what is still open |
+| `EVIDENCE.md` | What we measured, with the tests that show it |
 | `MAC-ANISETTE-LOGIN.md` | Procedure and error codes |
+| `RESYNC-RUNBOOK.md` | The experiments to run after a 429 cooldown, in order |
 
 ## What to report back
 
-Share the `[watch]` lines, the replay lines, the `[reports]` line and any error text. Remove passwords, codes, tokens and keys first.
+Share the `[restore]`, `[resync]` and replay lines, the `[tags]` lines and any error text. Remove passwords, codes, tokens, passcodes and keys first.

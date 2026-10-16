@@ -284,7 +284,12 @@ class CoreADI:
             "Synchronize",
             rc,
             ret,
-            {"mid_len": self._read_u32(mid_len), "srm_len": self._read_u32(srm_len)},
+            {
+                "mid_len": self._read_u32(mid_len),
+                "srm_len": self._read_u32(srm_len),
+                "mid": self._slice(mid_ptr, mid_len),
+                "srm": self._slice(srm_ptr, srm_len),
+            },
         )
 
     def storage_dispose(self, ptr: int) -> Result:

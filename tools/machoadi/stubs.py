@@ -13,7 +13,9 @@ under ``/Users/Shared/adi``, and the errno/stat plumbing mirrors BSD.
 from __future__ import annotations
 
 import errno as _errno
+import os
 import struct
+import time
 import zlib
 from typing import TYPE_CHECKING
 
@@ -295,8 +297,12 @@ class MacStubs:
     def gettimeofday(self, h: "Harness") -> int:
         tv = self._a(0)
         if tv:
-            self.h.write_u64(tv, 1700000000)
-            self.h.write_u64(tv + 8, 0)
+            # Real time by default. A frozen clock makes the whitebox OTP a constant, which Apple accepts
+            # for only ~a minute after provisioning (EVIDENCE.md sections 8, 9). ADI_FROZEN_TIME=1 restores
+            # the old behaviour (deterministic traces, reproducing the lease).
+            now = 1700000000 if os.environ.get("ADI_FROZEN_TIME") else time.time()
+            self.h.write_u64(tv, int(now))
+            self.h.write_u64(tv + 8, int((now % 1) * 1_000_000))
         return 0
 
     def gethostuuid(self, h: "Harness") -> int:

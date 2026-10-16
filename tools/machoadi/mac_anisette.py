@@ -29,6 +29,7 @@ import json
 import locale
 import secrets
 import sys
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -50,6 +51,26 @@ DEFAULT_CLIENT_INFO = "<MacBookPro13,2> <macOS;13.1;22C65> <com.apple.AuthKit/1 
 # rather than correctly shaped is exactly what a real Mac is needed to answer.
 _UDID_PREFIX = "00006000"
 _SERIAL_ALPHABET = "0123456789ABCDEFGHJKLMNPQRSTUVWXYZ"
+
+
+def provisioned_at(state: Path | str) -> float:
+    """Unix time this machine was provisioned.
+
+    NOT the store's mtime: `headers()` rewrites the store files on every OTP, so their mtime is
+    the time of the *last OTP*. That made every "machine age" printed by replay.py and --watch
+    count from the last header call (after login and 2FA) instead of from provisioning.
+    identity.json records the time; older states fall back to `adi.pb`, which is written once
+    at provisioning and never restored or rewritten.
+    """
+    state = Path(state)
+    try:
+        return float(json.loads((state / "identity.json").read_text())["provisioned_at"])
+    except (OSError, KeyError, ValueError):
+        pass
+    legacy = state / "store" / "adi.pb"
+    if legacy.exists():
+        return legacy.stat().st_mtime
+    return min(p.stat().st_mtime for p in (state / "store").glob("adi*.pb"))
 
 
 def _mint_identity() -> dict:
@@ -148,6 +169,7 @@ class MacAnisette:
             raise SystemExit(f"ProvisioningEnd failed: {ended.ret}")
 
         self.identity["routing"] = finished["routing"]
+        self.identity["provisioned_at"] = time.time()
         self.adi.set_routing(DS_ID, finished["routing"])
         self._save_identity()
         self._save_store()

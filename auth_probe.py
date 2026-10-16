@@ -101,8 +101,10 @@ def describe_delegates(response):
 
 
 def machine_born(state):
-    """Unix time the machine's store was written, i.e. when it was provisioned."""
-    return max(p.stat().st_mtime for p in (Path(state) / "store").glob("adi*.pb"))
+    """Unix time the machine was provisioned (identity.json). Not the store's mtime: every OTP rewrites it."""
+    sys.path.insert(0, str(Path(__file__).resolve().parent / "tools" / "machoadi"))
+    from mac_anisette import provisioned_at
+    return provisioned_at(state)
 
 
 def trace_requests(account, client_info=None, born=None):
@@ -215,7 +217,7 @@ async def watch_token(account, state, token, seconds, interval=10, other_after=4
     cli = Path(__file__).resolve().parent / "tools" / "machoadi" / "mac_anisette.py"
 
     def born_of(directory):
-        return max(p.stat().st_mtime for p in (Path(directory) / "store").glob("adi*.pb"))
+        return machine_born(directory)
 
     born = born_of(state)
     clean = make_mac_account(state)
@@ -249,15 +251,95 @@ async def watch_token(account, state, token, seconds, interval=10, other_after=4
             await other.close()
 
 
+async def run_restored(account, state, resyncer=None, after_login=None):
+    """Use a saved login: no password prompt at login, no 2FA. One request first, to see that it still holds."""
+    try:
+        state_value = account._login_state
+        print(f"[restore] login state {state_value.name}, machine age {_age(state)} s", flush=True)
+        if state_value != LoginState.LOGGED_IN:
+            print("[restore] the saved login is not complete; log in again (tools/aged_login.sh)")
+            return 1
+        if resyncer is not None and getattr(resyncer, "preflight", False):
+            outcome = await resyncer.ensure_fresh()
+            print(f"[resync] preflight at machine age {resyncer.age()} s -> {outcome}", flush=True)
+            if outcome not in ("accepted", "revived"):
+                print("[restore] the machine is not accepted; nothing more was sent")
+                return 1
+            account._anisette._window = None
+        url = "https://gateway.icloud.com/acsnservice/fetch"
+        token = account._login_state_data.get("mobileme_data", {}).get("tokens", {}).get("searchPartyToken")
+        if not token:
+            print("[restore] the saved login holds no searchPartyToken; log in again")
+            return 1
+        response = await account._http.post(url, auth=(account.dsid, token), headers=await account.get_anisette_headers(),
+                                            json=FETCH_BODIES[url])
+        print(f"[restore] token check: acsnservice -> {response.status_code}", flush=True)
+        if response.status_code != 200:
+            print("[restore] the token is no longer accepted; log in again (tools/aged_login.sh)")
+            return 1
+        if after_login is not None:
+            if not account._password:
+                account._password = getpass.getpass("Apple ID password (this saved login has none; needed once "
+                                                    "to renew the escrow token): ")
+            return await after_login(account) or 0
+        return 0
+    finally:
+        await account.close()
+
+
+def install_auto_resync(account, resyncer):
+    """Answer Apple's resync inside the login: a GSA reply of hsc 434 with a SIM is synchronised,
+    posted to syncMachine, and the same request is sent once more with a fresh OTP."""
+    inner = account._gsa_request
+
+    def forget_cached_otp():
+        account._anisette._window = None  # the provider caches headers per 30 s window
+
+    resyncer.on_synced = forget_cached_otp
+
+    async def resyncing(parameters):
+        response = await inner(parameters)
+        status = response.get("Status") or {}
+        sim = status.get("X-Apple-I-MD-DATA")
+        if status.get("hsc") == 434 and sim:
+            print(f"[resync] {parameters.get('o')} answered 434 at machine age {resyncer.age()} s: answering it",
+                  flush=True)
+            answered = await resyncer.answer_sim(sim)
+            if answered["ok"]:
+                forget_cached_otp()
+                response = await inner(parameters)
+                print("[resync] retried:", (response.get("Status") or {}).get("ec"), flush=True)
+        return response
+
+    account._gsa_request = resyncing
+
+
+async def _resync_before_submit(resyncer, account):
+    """The code is typed; a late second `complete` is answered -22406 (not 434), so renew first."""
+    if resyncer is None or not getattr(resyncer, "preflight", False):
+        return
+    outcome = await resyncer.ensure_fresh()
+    print(f"[resync] before 2FA submit, machine age {resyncer.age()} s -> {outcome}", flush=True)
+    account._anisette._window = None
+
+
 async def authenticate(account, directory, client_info=None, sms=None, save_session=None, reports=False,
                        watch=0, machine_state=None, watch_interval=10, watch_other_after=40,
-                       request_push=False):
+                       request_push=False, resyncer=None, after_login=None, save_login=None,
+                       keep_password=True):
     try:
         save_identity(account, directory)
         # tools/login.sh asks for these *before* it provisions the machine and passes them in the
         # environment, so no typing time is spent inside the machine's 60 s window.
         email = os.environ.pop("APPLE_ID", None) or input("Apple ID: ").strip()
         password = os.environ.pop("APPLE_PASSWORD", None) or getpass.getpass("Password: ")
+        if resyncer is not None and getattr(resyncer, "preflight", False):
+            # Preflight: do not spend a password attempt on a machine Apple would refuse.
+            outcome = await resyncer.ensure_fresh()
+            print(f"[resync] preflight at machine age {resyncer.age()} s -> {outcome}", flush=True)
+            if outcome not in ("accepted", "revived"):
+                raise SystemExit(f"preflight: the machine is not accepted ({outcome}); no login was attempted")
+            account._anisette._window = None
         try:
             state = await account.login(email, password)
         finally:
@@ -277,13 +359,16 @@ async def authenticate(account, directory, client_info=None, sms=None, save_sess
             await method.request()
             print(f"SMS requested for number {sms}.", flush=True)
             print(f"[2fa] the machine is {_age(machine_state)} s old; type the code at once.", flush=True)
-            state = await method.submit(input("SMS code: ").strip())
+            code = input("SMS code: ").strip()
+            await _resync_before_submit(resyncer, account)
+            state = await method.submit(code)
         elif state == LoginState.REQUIRE_2FA:
             # get_2fa_methods() also fetches the SMS page, which can fail with 401 if the machine's window has lapsed.
             # Use the trusted-device push method directly; no SMS request is ever sent.
             method = AsyncTrustedDeviceSecondFactor(account)
             if request_push:
-                # Normally Apple pushes at the 409. This asks again, and reports what Apple answered.
+                # The prompt does not arrive on its own at the 409 (observed 2026-10-16), so it is asked for
+                # by default; this reports what Apple answered.
                 try:
                     await method.request()
                     print("[2fa] push requested: accepted by Apple", flush=True)
@@ -294,7 +379,9 @@ async def authenticate(account, directory, client_info=None, sms=None, save_sess
             print("Apple has pushed a prompt to your other devices. Tap Allow, then enter the code.")
             print(f"[2fa] the machine is {_age(machine_state)} s old; the code must be accepted within about "
                   "40 s of provisioning, so type it as soon as you have it.", flush=True)
-            state = await method.submit(input("2FA code: ").strip())
+            code = input("2FA code: ").strip()
+            await _resync_before_submit(resyncer, account)
+            state = await method.submit(code)
         print("Login state:", state.name)
         if state == LoginState.LOGGED_IN:
             tokens = account._login_state_data.get("mobileme_data", {}).get("tokens", {})
@@ -311,6 +398,16 @@ async def authenticate(account, directory, client_info=None, sms=None, save_sess
             if watch:
                 await watch_token(account, machine_state, tokens["searchPartyToken"], watch, watch_interval,
                                   watch_other_after)
+            if save_login:
+                sys.path.insert(0, str(Path(__file__).resolve().parent / "tools" / "machoadi"))
+                import login_store
+                login_store.save(account, save_login, keep_password=keep_password)
+                print(f"[login] saved (0600, {'with' if keep_password else 'WITHOUT'} the password): {save_login}"
+                      "  -- it is a credential; delete it when done", flush=True)
+            if after_login is not None:
+                code = await after_login(account)
+                if code:
+                    return code
             if reports:
                 # The private key comes from the environment so it is in no argv and no file.
                 key = KeyPair.from_b64(os.environ["FINDMY_KEY"])
@@ -352,14 +449,51 @@ def main():
                         help="during --watch, provision a second machine once the first is SECONDS old and "
                         "send the same token with its headers (default 40)")
     parser.add_argument("--request-push", action="store_true",
-                        help="on 2FA by trusted device, also ask Apple to send the prompt again and print its answer")
+                        help="(now the default) on 2FA by trusted device, ask Apple to send the prompt and "
+                        "print its answer")
+    parser.add_argument("--no-request-push", action="store_true",
+                        help="on 2FA by trusted device, do NOT ask for the prompt; rely on Apple's own push at "
+                        "the 409, which in practice does not arrive")
     parser.add_argument("--reports", action="store_true",
                         help="after login, fetch location reports for the private key in $FINDMY_KEY (base64)")
+    parser.add_argument("--auto-resync", action="store_true",
+                        help="with --macadi: answer Apple's resync (hsc 434) so an AGED machine can log in: a "
+                        "preflight before the password is used, a renewal right before the 2FA code is "
+                        "submitted, and any 434 during the login (see tools/machoadi/resync.py)")
+    parser.add_argument("--preflight", action="store_true",
+                        help="with --auto-resync: also check the machine with a credential-free init before the "
+                        "login and before the 2FA submit (costs 1-3 Apple requests each; off by default now that "
+                        "the real clock keeps the machine accepted -- a 434 during the login is still answered)")
+    parser.add_argument("--ignore-cooldown", action="store_true", help="skip the shared 429 cooldown guard")
+    parser.add_argument("--save-login", metavar="FILE",
+                        help="after a successful login, save the account state (service tokens and, unless "
+                        "--no-save-password, the password) to FILE, mode 0600. It is a credential.")
+    parser.add_argument("--no-save-password", action="store_true", help="with --save-login: leave the password out")
+    parser.add_argument("--restore-login", metavar="FILE",
+                        help="with --macadi: use a login saved by --save-login instead of logging in "
+                        "(no password prompt, no 2FA)")
+    parser.add_argument("--tags", action="store_true",
+                        help="after login: read the keychain (asks which device's screen-lock passcode to use), "
+                        "decrypt your tags from the account and fetch their locations; read-only, never joins "
+                        "the keychain circle (tools/machoadi/tag_keys.py)")
+    parser.add_argument("--tags-list", action="store_true",
+                        help="with --tags: only list the recoverable escrow records; no passcode is requested")
+    parser.add_argument("--tags-save", metavar="FILE", help="with --tags: save the decrypted accessories (0600)")
     parser.add_argument("--macadi", type=Path, metavar="STATE",
                         help="log in with the Mac CoreADI emulator in STATE (see tools/machoadi/mac_anisette.py): "
                         "OTP/machine ID/routing come from the genuine Mac framework under Unicorn, and uid/devid "
                         "are the pair that STATE provisioned")
     args = parser.parse_args()
+    if args.restore_login and not args.macadi:
+        parser.error("--restore-login needs --macadi")
+    if (args.tags_list or args.tags_save) and not args.tags:
+        parser.error("--tags-list/--tags-save need --tags")
+    if args.auto_resync and not args.macadi:
+        parser.error("--auto-resync needs --macadi")
+    if args.macadi:
+        sys.path.insert(0, str(Path(__file__).resolve().parent / "tools" / "machoadi"))
+        import cooldown
+        cooldown.guard(args.ignore_cooldown)
     if args.macadi and args.anisette_url:
         parser.error("--macadi supplies its own Anisette: drop --anisette-url")
     if args.plain_z_timestamp:
@@ -374,19 +508,45 @@ def main():
                              if metadata else "PyPI release"))
     try:
         async def run():
-            account = make_mac_account(args.macadi) if args.macadi else make_account(args.anisette_url, args.state_dir)
+            if args.restore_login:
+                import login_store
+                account = login_store.restore(args.macadi, args.restore_login)
+                print("[macadi] state:", args.macadi, "(restored login)", flush=True)
+            else:
+                account = make_mac_account(args.macadi) if args.macadi else make_account(args.anisette_url, args.state_dir)
             client_info = args.client_info
             if args.consistent_user_agent:
                 account_module._GSA_USER_AGENT = account._anisette.akd_user_agent
             trace_requests(account, client_info, machine_born(args.macadi) if args.macadi else None)
+            after_login = None
+            if args.tags:
+                from tag_keys import run as run_tags
+
+                async def after_login(logged_in):
+                    return await run_tags(logged_in, list_only=args.tags_list, save=args.tags_save)
+            resyncer = None
+            if args.auto_resync:
+                from resync import Resyncer
+                resyncer = Resyncer(args.macadi)
+                resyncer.preflight = args.preflight
+                install_auto_resync(account, resyncer)
+            if args.restore_login:
+                return await run_restored(account, args.macadi, resyncer, after_login)
             return await authenticate(account, args.state_dir, client_info, args.sms,
                                       args.save_session, args.reports, args.watch, args.macadi,
-                                      args.watch_interval, args.watch_other_after, args.request_push)
+                                      args.watch_interval, args.watch_other_after, not args.no_request_push,
+                                      resyncer, after_login, args.save_login, not args.no_save_password)
         return asyncio.run(run())
     except KeyboardInterrupt:
         return 130
     except Exception as error:
         print(f"Authentication stopped: {type(error).__name__}: {error}")
+        if args.macadi:
+            import cooldown
+            if cooldown.looks_like_429(error):
+                cooldown.note_429()
+                print(f"[cooldown] 429 recorded: nothing in this repo will talk to Apple for "
+                      f"{cooldown.COOLDOWN_MINUTES} minutes", flush=True)
         return 1
 
 

@@ -29,6 +29,8 @@ import urllib.request
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
+from cooldown import note_429
+
 LOOKUP_URL = "https://gsa.apple.com/grandslam/GsService2/lookup"
 
 # AuthKit's own identifiers.
@@ -119,6 +121,7 @@ class GSA:
                 return resp.read()
         except urllib.error.HTTPError as exc:
             if exc.code in THROTTLE_CODES:
+                note_429()
                 raise GSAError(
                     f"HTTP {exc.code} from {url}: Apple is throttling this source. This is a rate "
                     f"limit, not a verdict -- the identical request succeeds after a cooldown, so "
@@ -178,3 +181,29 @@ class GSA:
                 raise GSAError(f"midFinishProvisioning gave no {key}: {response!r}")
             out[name] = base64.b64decode(value)
         return out
+
+    def sync_machine(self, mid_b64: str, srm_b64: str, routing: int | None = None) -> dict:
+        """Answer Apple's resync (hsc 434 / `X-Apple-I-MD-DATA`) the way akd sends it.
+
+        Request shape from `-[AKNativeAnisetteService _createSyncURLRequestWithMID:
+        SRM:routingInfo:completion:]` (akd, macOS 15, decompiled): the MidService
+        sync-anisette URL, the standard provisioning device headers, and a body of
+
+            {"Header": {}, "Request": {"srm": ..., "X-Apple-I-MD-M": ...,
+                                       "X-Apple-I-MD-RINFO": <int, when set>}}
+
+        `X-Apple-I-MD-M` is *not* optional in akd's build (the earlier attempt that sent
+        only `srm` drew an empty, verdict-free 200). The verdict is read from
+        `Response -> Status` the same as every other MidService reply.
+        """
+        url = self.urls.get("midSyncMachine")
+        if not url:
+            raise GSAError("URL bag has no midSyncMachine")
+        request: dict[str, object] = {
+            "srm": srm_b64,
+            "X-Apple-I-MD-M": mid_b64,
+        }
+        if routing is not None:
+            request["X-Apple-I-MD-RINFO"] = routing
+        response = self._post_plist(url, request)
+        return response
