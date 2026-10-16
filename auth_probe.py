@@ -7,6 +7,7 @@ import importlib.metadata
 import json
 import os
 import platform
+import shutil
 import sys
 import plistlib
 from pathlib import Path
@@ -179,38 +180,60 @@ async def probe_fetch(account, client_info):
                 "www-authenticate": dict(response.headers).get("WWW-Authenticate")}), flush=True)
 
 
-async def watch_token(account, state, token, seconds, interval=10):
-    """Send the same acsnservice request every `interval` s by two routes, to tell *time* from *context*.
+async def watch_token(account, state, token, seconds, interval=10, other_after=40):
+    """Send the same acsnservice request every `interval` s by several routes, to tell what ends the window.
 
     live  -- the logged-in account object: its HTTP client keeps whatever the login left behind.
     clean -- a new account on the same machine with only the saved token, like `replay.py`.
     bad   -- negative control: `clean` with the token altered. It must be 401.
-    Both use the machine's current headers, and the machine's age is printed with each pair.
+    other -- a second machine, provisioned once the first has been alive `other_after` s, sending the
+             same token with its own headers. 200 here, after the first machine has lapsed, means the
+             token outlives its machine and only the machine's headers expire; 401 means the token
+             dies with (or is bound to) the machine that logged in.
+    The machine's age is printed with each row.
     """
+    import subprocess
     import time
     url = "https://gateway.icloud.com/acsnservice/fetch"
-    born = max(p.stat().st_mtime for p in (Path(state) / "store").glob("adi*.pb"))
+    cli = Path(__file__).resolve().parent / "tools" / "machoadi" / "mac_anisette.py"
+
+    def born_of(directory):
+        return max(p.stat().st_mtime for p in (Path(directory) / "store").glob("adi*.pb"))
+
+    born = born_of(state)
     clean = make_mac_account(state)
+    other, other_born = None, None
     try:
         end = time.time() + seconds
         while time.time() < end:
+            if other is None and time.time() - born >= other_after:
+                directory = Path(str(state) + "-b")
+                shutil.rmtree(directory, ignore_errors=True)
+                subprocess.run([sys.executable, str(cli), "provision", "--state", str(directory)],
+                               check=True, capture_output=True, text=True, timeout=120)
+                other, other_born = make_mac_account(directory), born_of(directory)
+            routes = [("live", account, token), ("clean", clean, token),
+                      ("bad", clean, token[:-1] + ("A" if token[-1] != "A" else "B"))]
+            if other is not None:
+                routes.append(("other", other, token))
             row = []
-            # "bad" is the control: the same request with the last token character changed. It has to
-            # be 401, or a 200 above proves nothing about the token.
-            for label, acct, tok in (("live", account, token), ("clean", clean, token),
-                                     ("bad", clean, token[:-1] + ("A" if token[-1] != "A" else "B"))):
+            for label, acct, tok in routes:
                 headers = await acct.get_anisette_headers()
                 response = await acct._http.post(url, auth=(account.dsid, tok), headers=headers,
                                                  json=FETCH_BODIES[url])
                 row.append(f"{label} {response.status_code}")
-            print(f"[watch] machine age {time.time() - born:5.0f} s   " + "   ".join(row), flush=True)
+            other_age = f"   (other machine age {time.time() - other_born:3.0f} s)" if other is not None else ""
+            print(f"[watch] machine age {time.time() - born:5.0f} s   " + "   ".join(row) + other_age,
+                  flush=True)
             await asyncio.sleep(interval)
     finally:
         await clean.close()
+        if other is not None:
+            await other.close()
 
 
 async def authenticate(account, directory, client_info=None, sms=None, save_session=None, reports=False,
-                       watch=0, machine_state=None, watch_interval=10):
+                       watch=0, machine_state=None, watch_interval=10, watch_other_after=40):
     try:
         save_identity(account, directory)
         email = input("Apple ID: ").strip()
@@ -251,7 +274,8 @@ async def authenticate(account, directory, client_info=None, sms=None, save_sess
                                "saved_at": datetime.now(timezone.utc).isoformat()}, stream)
                 print("session saved (0600):", path, flush=True)
             if watch:
-                await watch_token(account, machine_state, tokens["searchPartyToken"], watch, watch_interval)
+                await watch_token(account, machine_state, tokens["searchPartyToken"], watch, watch_interval,
+                                  watch_other_after)
             if reports:
                 # The private key comes from the environment so it is in no argv and no file.
                 key = KeyPair.from_b64(os.environ["FINDMY_KEY"])
@@ -289,6 +313,9 @@ def main():
                         "account and through a clean one holding only the token (needs --macadi)")
     parser.add_argument("--watch-interval", type=int, default=10, metavar="SECONDS",
                         help="seconds between --watch requests (default 10)")
+    parser.add_argument("--watch-other-after", type=int, default=40, metavar="SECONDS",
+                        help="during --watch, provision a second machine once the first is SECONDS old and "
+                        "send the same token with its headers (default 40)")
     parser.add_argument("--reports", action="store_true",
                         help="after login, fetch location reports for the private key in $FINDMY_KEY (base64)")
     parser.add_argument("--macadi", type=Path, metavar="STATE",
@@ -317,7 +344,7 @@ def main():
             trace_requests(account, client_info)
             return await authenticate(account, args.state_dir, client_info, args.sms,
                                       args.save_session, args.reports, args.watch, args.macadi,
-                                      args.watch_interval)
+                                      args.watch_interval, args.watch_other_after)
         return asyncio.run(run())
     except KeyboardInterrupt:
         return 130

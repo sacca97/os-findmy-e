@@ -70,6 +70,11 @@ class LoggedInPathTest(unittest.TestCase):
                 login=AsyncMock(return_value=LoginState.LOGGED_IN),
                 to_json=lambda: (_ for _ in ()).throw(NotImplementedError()))
 
+        def provision_second_machine(command, **_):
+            second = Path(command[command.index("--state") + 1])
+            (second / "store").mkdir(parents=True)
+            (second / "store" / "adi.pb").write_bytes(b"x")
+
         with tempfile.TemporaryDirectory() as directory:
             machine = Path(directory) / "machine"
             (machine / "store").mkdir(parents=True)
@@ -78,14 +83,16 @@ class LoggedInPathTest(unittest.TestCase):
             output = io.StringIO()
             with patch("builtins.input", return_value="fake@example.invalid"), \
                     patch("getpass.getpass", return_value="fake password"), \
-                    patch.object(auth_probe, "make_mac_account", return_value=fake_account()), \
+                    patch.object(auth_probe, "make_mac_account", side_effect=lambda *_: fake_account()), \
+                    patch("subprocess.run", side_effect=provision_second_machine), \
                     redirect_stdout(output):
                 code = asyncio.run(auth_probe.authenticate(
                     fake_account(), Path(directory) / "state", None, None, str(session), False,
-                    1, machine, 1))
+                    1, machine, 1, 0))
             self.assertEqual(code, 0)
             self.assertIn("[watch]", output.getvalue())
             self.assertIn("bad 401", output.getvalue())
+            self.assertIn("other 200", output.getvalue())
             self.assertEqual(json.loads(session.read_text())["searchPartyToken"], "tok123")
             self.assertEqual(session.stat().st_mode & 0o777, 0o600)
 
