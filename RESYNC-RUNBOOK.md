@@ -1,5 +1,9 @@
 # Runbook: make the token last (run after the 429 cooldown)
 
+> **Reader's note.** This is the lab notebook for the experiments run after an HTTP 429 cooldown. The real clock is
+> now the default, so Step 0 is already answered (it fixed the one-minute lease) and the resync steps are only the
+> repair path. For normal use, see `README.md`.
+
 Everything below is prepared and tested offline (`.venv/bin/python -m unittest test_resync test_auth_probe`).
 Nothing here provisions a machine except Step 0, and nothing logs in except Step 2.
 

@@ -2,11 +2,19 @@
 
 This file lists what we measured, in the order that matters. Each result names the test that shows it. Dates are 2026-10-16. All tests used one IP address and a throwaway Apple Account.
 
+## Summary
+
+- A login with an emulated Mac works, 2FA included (sections 2, 3).
+- For days a machine was accepted for only about a minute (sections 1, 6). **That was an artefact of our emulation**: CoreADI's clock was frozen, so the one-time code never changed (section 8). With the real clock, a fresh machine is accepted at 4 minutes, a token works at 16 minutes, a login completes at 29 minutes, and a saved login still works at 75 minutes (section 9).
+- `-22421` / `hsc 434` is Apple asking for a resync, and the machine can answer (section 7).
+- The tag keys can be read from the account (section 10). The location reports of those tags were not recorded.
+- Sections 1 and 6 are kept as they were measured. Read them with section 8.
+
 ## Background
 
 An Apple login needs Anisette data. It proves that the request comes from a real Mac. Here, Apple's macOS CoreADI library (iTunes 12.8.3, version 4.19.0) makes the data under Unicorn emulation. For a long time Apple refused every request with `-22421`. We tried different device IDs, serials, models, builds and platform claims. None of them helped.
 
-## 1. A new machine is accepted for about 60 seconds
+## 1. A new machine is accepted for about 60 seconds (with a frozen clock; see section 8)
 
 After provisioning, Apple answers the SRP `init` request with `-20970` ("account information entered incorrectly"). This reply means that Apple accepted the machine and rejected only our made-up account. After about 60 to 75 seconds, Apple answers with `-22421` for ever.
 
@@ -66,7 +74,7 @@ HTTP 429 is the real rate limit. It comes from the edge as an HTML page, and it 
 - On macOS 26.7.1 there is no CoreADI library. The ADI code is in a daemon (`adid`) with no exported dispatcher. The harness cannot call it.
 - A current Mac stores its ADI data as one version-2 `adi.pb` file in `/private/var/db/fpsd/adi/`. Version 4.19 and version 15.8.1 write a version-1 `adi.pb` and a per-user file. We did not need the newer format.
 
-## 6. The token is bound to its machine, and the machine lapses within about a minute
+## 6. The token is bound to its machine (the lapse measured here came from the frozen clock; see sections 8 and 9)
 
 `tools/flow_test.sh` logs in, then sends the same `acsnservice` request every few seconds by four routes:
 `live` (the logged-in account), `clean` (a new account with only the saved token), `bad` (a changed token,

@@ -2,6 +2,16 @@
 
 This project logs in to an Apple Account on Linux. It gets the machine proof (Anisette data) from Apple's own macOS CoreADI library. The library runs under Unicorn emulation. No Mac is needed, and the machine is made up.
 
+## In short
+
+Apple's login and Find My services expect every request to carry **Anisette data**: a set of headers (`X-Apple-I-MD`, `X-Apple-I-MD-M` and others) that proves the request comes from an Apple machine that registered itself with Apple. On a real Mac a system library, **CoreADI**, makes them. This project runs that same library on Linux under the Unicorn CPU emulator, registers a **made-up Mac** with Apple, and then uses it to:
+
+1. log in to an Apple Account (password, then 2FA) and get service tokens;
+2. replay the Find My token with that machine's headers;
+3. read the keys of your own tags out of your iCloud account, and fetch and decrypt their location reports.
+
+It does not break anything: the account password, the 2FA code and (for tag keys) a device passcode are all required. It only replaces the Mac. Use your own account and your own tags.
+
 ## Status
 
 | Works | Not shown yet |
@@ -97,6 +107,22 @@ tools/restored_run.sh /tmp/macadi/NAME --tags-from /tmp/macadi/NAME-tags.json
 
 This route ran to the end once, on one account: it listed the account's iPhone and a third-party "Smart Tracker" paired through Find My, and decrypted both. Delete the tags file when you are done: it holds the tags' master keys.
 
+## Glossary
+
+| Term | Meaning |
+| --- | --- |
+| Anisette data | The machine-proof headers described above. Made by CoreADI from the machine's state and the clock |
+| CoreADI / ADI | Apple's library that makes Anisette data. We run the macOS build (iTunes 12.8.3, version 4.19) under emulation |
+| Provisioning | The one-time registration of a machine with Apple. Apple sends a challenge (SPIM), CoreADI answers (CPIM), Apple returns the machine's credentials (PTM and TK) |
+| MID and OTP | Machine ID and one-time code, the two values in the Anisette headers. The OTP changes every 30 seconds, because it depends on the clock |
+| GSA, SRP | Grand Slam Authentication is Apple's login service (`gsa.apple.com`). SRP is the password protocol it uses: `init`, then `complete` |
+| Service token | What a successful login returns. `searchPartyToken` is the Find My one. It only works with the headers of the machine that made it |
+| Resync (`hsc 434`) | Apple asking a machine to re-synchronise. It sends a SIM (`X-Apple-I-MD-DATA`), CoreADI's `Synchronize` turns it into an SRM, and the tool posts the SRM to `midSyncMachine` |
+| PET | A password-equivalent token, valid for about 5 minutes. Obtained by re-authenticating. The keychain service wants one |
+| Escrow record | A backup of a trusted device's iCloud Keychain identity. It is unlocked with **that device's screen-lock passcode** |
+| BeaconStore | The CloudKit zone where Find My keeps your tags' keys, encrypted with iCloud Keychain keys |
+| Master key | A tag's secret. The tag broadcasts rotating public keys derived from it, and location reports are encrypted to those keys |
+
 ## How it works
 
 1. The tool gets the URL bag from `gsa.apple.com` and starts the machine provisioning.
@@ -109,6 +135,7 @@ This route ran to the end once, on one account: it listed the account's iPhone a
 
 ## Safety
 
+- **Responsible use.** Only use accounts and tags that you own. The repository does not contain Apple's library; `tools/fetch_mac_coreadi.py` downloads it from Apple. Do not share the extracted library, state directories, saved logins or tag files.
 - Use a **throwaway Apple Account** for experiments. Each login adds a fake Mac to the account's device list. Remove them after the tests.
 - Apple rate-limits with HTTP 429, and it did so after roughly 25 requests in half an hour. Every tool here records a 429 in `/tmp/macadi/gsa-429` and refuses to talk to Apple for 45 minutes. Check with `.venv/bin/python tools/machoadi/cooldown.py`. The first 429 stops a run, and nothing is retried.
 - Apple allows one provisioning for each device ID, and also for each machine. A second one returns HTTP 433 even with a fresh ID.
