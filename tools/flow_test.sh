@@ -7,7 +7,7 @@
 #      a second machine provisioned then;
 #   3. replay the saved token with a second, freshly provisioned machine.
 #
-# Usage: [FINDMY_KEY='<base64 private key>'] tools/flow_test.sh [--2fa device|sms] [--request-push] [NAME] [WATCH_SECONDS] [INTERVAL_SECONDS]
+# Usage: [FINDMY_KEY='<base64 private key>'] tools/flow_test.sh [--2fa device|sms] [--request-push] [--show-password] [NAME] [WATCH_SECONDS] [INTERVAL_SECONDS]
 #   --2fa  second factor: "device" (default) takes the code from a trusted Apple device,
 #          "sms" sends it to the account's first phone number
 #   --request-push  with --2fa device, ask Apple to send the prompt again and print its answer
@@ -28,6 +28,7 @@ extra=()
 while [ $# -gt 0 ]; do
   case "$1" in
     --request-push) extra+=(--request-push); shift ;;
+    --show-password) extra+=(--show-password); shift ;;
     --2fa) [ $# -ge 2 ] || { echo "--2fa needs device or sms" >&2; exit 2; }; tfa="$2"; shift 2 ;;
     *) positional+=("$1"); shift ;;
   esac
