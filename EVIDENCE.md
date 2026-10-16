@@ -7,7 +7,7 @@ This file lists what we measured, in the order that matters. Each result names t
 - A login with an emulated Mac works, 2FA included (sections 2, 3).
 - For days a machine was accepted for only about a minute (sections 1, 6). **That was an artefact of our emulation**: CoreADI's clock was frozen, so the one-time code never changed (section 8). With the real clock, a fresh machine is accepted at 4 minutes, a token works at 16 minutes, a login completes at 29 minutes, and a saved login still works at 75 minutes (section 9).
 - `-22421` / `hsc 434` is Apple asking for a resync, and the machine can answer (section 7).
-- The tag keys can be read from the account (section 10). The location reports of those tags were not recorded.
+- The tag keys can be read from the account, and a third-party tag returned location reports (section 10).
 - Sections 1 and 6 are kept as they were measured. Read them with section 8.
 
 ## Background
@@ -140,7 +140,7 @@ Under the frozen clock the same kind of machine was refused from about 74 second
 only difference between the two arms is the time the library reads. The frozen clock was the cause of the lease.
 
 **Limits.** One machine. Only the first line of the 12-request replay was recorded. Not shown: any age beyond about
-75 minutes, a token that survives hours or days, a real location report, and location reports from the tags.
+75 minutes, a token that survives hours or days, a real location report, and a longer test than about 75 minutes.
 
 ## 10. The tag keys can be read from the account
 
@@ -153,12 +153,15 @@ only difference between the two arms is the time the library reads. The frozen c
 | keychain keys, then BeaconStore decrypt | 2 accessories: the iPhone, and a third-party "Smart Tracker" paired through Find My |
 
 A third-party tag paired through Find My is an ordinary BeaconStore beacon with a private key. Nothing was written to
-the account (the keychain `join` is never called). Not shown: what the location fetch returned for these tags.
+the account (the keychain `join` is never called).
+
+Fetching with the saved tags (no passcode): the iPhone returned 0 reports, the Smart Tracker returned 8, the newest
+within the previous half hour, accuracy 52 to 102 m. So the library's AirTag key derivation works for this tracker.
+Coordinates are not recorded here.
 
 ## Open questions
 
 - **How long does it last now?** Beyond about 30 minutes, with the real clock: hours, days? A single replay an hour later tells.
-- **Does a real location report come back?** The tags decrypt (section 10), but the report counts were not recorded. Fetch them again with `tools/restored_run.sh STATE --tags-from FILE`.
 - **Does a saved login keep working?** `tools/restored_run.sh` checks the token with one request and says when to log in again.
 - **Do the identity and claim variants matter inside the window?** We measured most of them outside it, so those results do not apply.
 - **What happens on the account side?** Each login adds a fake Mac to the device list. We did not count them.

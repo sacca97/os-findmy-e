@@ -17,7 +17,7 @@ It does not break anything: the account password, the 2FA code and (for tag keys
 | Works | Not shown yet |
 | --- | --- |
 | Full login with SRP and 2FA (trusted-device push or SMS) | A real location report from a tag |
-| Service tokens, including `searchPartyToken` | Location reports from those tags (the tags were decrypted; the report counts were not recorded) |
+| Service tokens, including `searchPartyToken` | A longer test: hours or days, more than one account or machine |
 | A fresh machine is accepted for at least 4 minutes (credential-free probe, real clock) | How long a machine and a token last beyond about 30 minutes |
 | `acsnservice` accepts the token with its own machine's headers 16 minutes after provisioning (`200`, bad-token control `401`) | Whether the token survives hours or days |
 | A login on a machine 29 minutes old completed and asked for no second 2FA (seen once) | |
@@ -105,7 +105,7 @@ The second command lists the devices (with one device it picks it for you; with 
 tools/restored_run.sh /tmp/macadi/NAME --tags-from /tmp/macadi/NAME-tags.json
 ```
 
-This route ran to the end once, on one account: it listed the account's iPhone and a third-party "Smart Tracker" paired through Find My, and decrypted both. Delete the tags file when you are done: it holds the tags' master keys.
+This route ran to the end once, on one account: it listed the account's iPhone and a third-party "Smart Tracker" paired through Find My, decrypted both, and the tracker returned 8 location reports (the iPhone returned none). Delete the tags file when you are done: it holds the tags' master keys.
 
 ## Glossary
 
