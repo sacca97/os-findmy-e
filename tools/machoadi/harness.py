@@ -1,8 +1,7 @@
 """Unicorn-backed x86_64 Mach-O runtime for the Mac CoreADI whitebox.
 
-The goal is *observability*, not reimplementation: run Apple's own (old, Intel,
-pre-chained-fixups) CoreADI binary under emulation so the ADI dispatcher can be
-tracing-instrumented, then use the traces to write a clean-room surrogate.
+This runs Apple's own (old, Intel, pre-chained-fixups) CoreADI binary under
+emulation, so that its ADI dispatcher can be called from Python.
 
 Loading strategy
 ----------------
