@@ -132,13 +132,25 @@ Under the frozen clock the same kind of machine was refused from about 74 second
 only difference between the two arms is the time the library reads. The frozen clock was the cause of the lease.
 
 **Limits.** One machine. Only the first line of the 12-request replay was recorded. Not shown: any age beyond about
-75 minutes, a token that survives hours or days, a real location report, and the keychain route for tag keys (the first
-try stopped at an HTTP 429, after roughly 25 requests in half an hour).
+75 minutes, a token that survives hours or days, a real location report, and location reports from the tags.
+
+## 10. The tag keys can be read from the account
+
+`tag_keys.py`, saved login, real clock, one account. The CloudKit device identifier is the machine's host UUID.
+
+| Step | Result |
+| --- | --- |
+| list escrow records (no passcode) | 1 recoverable record: the account's iPhone |
+| recover with that iPhone's screen-lock passcode (one try) | succeeded |
+| keychain keys, then BeaconStore decrypt | 2 accessories: the iPhone, and a third-party "Smart Tracker" paired through Find My |
+
+A third-party tag paired through Find My is an ordinary BeaconStore beacon with a private key. Nothing was written to
+the account (the keychain `join` is never called). Not shown: what the location fetch returned for these tags.
 
 ## Open questions
 
 - **How long does it last now?** Beyond about 30 minutes, with the real clock: hours, days? A single replay an hour later tells.
-- **Does a real location report come back?** This needs the private key of a tag you own: `tools/fetch_tag.sh`, or from the account with `tag_keys.py` (needs a device passcode). Neither has run to the end against Apple.
+- **Does a real location report come back?** The tags decrypt (section 10), but the report counts were not recorded. Fetch them again with `tools/restored_run.sh STATE --tags-from FILE`.
 - **Does a saved login keep working?** `tools/restored_run.sh` checks the token with one request and says when to log in again.
 - **Do the identity and claim variants matter inside the window?** We measured most of them outside it, so those results do not apply.
 - **What happens on the account side?** Each login adds a fake Mac to the device list. We did not count them.

@@ -234,6 +234,28 @@ class ReadAccessoriesTest(unittest.TestCase):
         self.assertNotIn("b'k'", text)
 
 
+class SavedTagsTest(unittest.TestCase):
+    def test_saved_accessories_load_and_are_fetched_without_any_keychain(self):
+        import tag_keys
+        from unittest.mock import AsyncMock
+        from findmy import FindMyAccessory
+
+        item = {"type": "accessory", "master_key": "00" * 28, "skn": "11" * 32, "sks": "22" * 32,
+                "paired_at": "2026-10-14T11:24:03+00:00", "name": "Test", "model": "Smart Tracker",
+                "identifier": "00000000-0000-4000-8000-000000000001", "group_identifier": None,
+                "serial_number": None, "alignment_date": "2026-10-14T11:24:03+00:00", "alignment_index": 1}
+        FindMyAccessory.from_json(item)  # the saved shape must load
+        path = Path(tempfile.mkdtemp()) / "tags.json"
+        path.write_text(json.dumps([item]))
+        account = SimpleNamespace(fetch_location_history=AsyncMock(return_value=[]))
+        said = []
+        code = asyncio.run(tag_keys.fetch_saved(account, str(path), said.append))
+        self.assertEqual(code, 0)
+        account.fetch_location_history.assert_awaited_once()
+        self.assertIn("Test: 0 report(s)", "\n".join(said))
+        self.assertEqual(asyncio.run(tag_keys.fetch_saved(account, "/nonexistent", said.append)), 1)
+
+
 class TagKeysTest(unittest.TestCase):
     """The passcode guard rails, with the keychain and CloudKit replaced by fakes."""
 

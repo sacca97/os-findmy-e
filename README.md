@@ -7,7 +7,7 @@ This project logs in to an Apple Account on Linux. It gets the machine proof (An
 | Works | Not shown yet |
 | --- | --- |
 | Full login with SRP and 2FA (trusted-device push or SMS) | A real location report from a tag |
-| Service tokens, including `searchPartyToken` | The tag keys from the account (keychain route): the first try stopped at an HTTP 429 before it got that far |
+| Service tokens, including `searchPartyToken` | Location reports from those tags (the tags were decrypted; the report counts were not recorded) |
 | A fresh machine is accepted for at least 4 minutes (credential-free probe, real clock) | How long a machine and a token last beyond about 30 minutes |
 | `acsnservice` accepts the token with its own machine's headers 16 minutes after provisioning (`200`, bad-token control `401`) | Whether the token survives hours or days |
 | A login on a machine 29 minutes old completed and asked for no second 2FA (seen once) | |
@@ -89,7 +89,13 @@ tools/aged_login.sh /tmp/macadi/NAME --tags --tags-list    # login once; lists r
 tools/restored_run.sh /tmp/macadi/NAME --tags --tags-save /tmp/macadi/NAME-tags.json
 ```
 
-The second command lists the devices (with one device it picks it for you; with several it asks which) and asks for the passcode, once. A wrong passcode is **never retried**, because Apple limits wrong guesses on a device's escrow record. `--tags-save` writes the decrypted tags (their master keys are secrets) with mode 0600, so that later fetches need no passcode. This route has not run against Apple to the end yet.
+The second command lists the devices (with one device it picks it for you; with several it asks which) and asks for the passcode, once. A wrong passcode is **never retried**, because Apple limits wrong guesses on a device's escrow record. `--tags-save` writes the decrypted tags (their master keys are secrets) with mode 0600. Later fetches then need no passcode, no keychain and no escrow:
+
+```bash
+tools/restored_run.sh /tmp/macadi/NAME --tags-from /tmp/macadi/NAME-tags.json
+```
+
+This route ran to the end once, on one account: it listed the account's iPhone and a third-party "Smart Tracker" paired through Find My, and decrypted both. Delete the tags file when you are done: it holds the tags' master keys.
 
 ## How it works
 

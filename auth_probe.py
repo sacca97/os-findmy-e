@@ -251,7 +251,7 @@ async def watch_token(account, state, token, seconds, interval=10, other_after=4
             await other.close()
 
 
-async def run_restored(account, state, resyncer=None, after_login=None):
+async def run_restored(account, state, resyncer=None, after_login=None, needs_password=True):
     """Use a saved login: no password prompt at login, no 2FA. One request first, to see that it still holds."""
     try:
         state_value = account._login_state
@@ -278,7 +278,7 @@ async def run_restored(account, state, resyncer=None, after_login=None):
             print("[restore] the token is no longer accepted; log in again (tools/aged_login.sh)")
             return 1
         if after_login is not None:
-            if not account._password:
+            if needs_password and not account._password:
                 account._password = getpass.getpass("Apple ID password (this saved login has none; needed once "
                                                     "to renew the escrow token): ")
             return await after_login(account) or 0
@@ -476,6 +476,9 @@ def main():
                         help="after login: read the keychain (asks which device's screen-lock passcode to use), "
                         "decrypt your tags from the account and fetch their locations; read-only, never joins "
                         "the keychain circle (tools/machoadi/tag_keys.py)")
+    parser.add_argument("--tags-from", metavar="FILE",
+                        help="with --restore-login: fetch the locations of the accessories saved by --tags-save. "
+                        "No keychain, no escrow, no passcode")
     parser.add_argument("--tags-list", action="store_true",
                         help="with --tags: only list the recoverable escrow records; no passcode is requested")
     parser.add_argument("--tags-save", metavar="FILE", help="with --tags: save the decrypted accessories (0600)")
@@ -486,6 +489,10 @@ def main():
     args = parser.parse_args()
     if args.restore_login and not args.macadi:
         parser.error("--restore-login needs --macadi")
+    if args.tags_from and not args.restore_login:
+        parser.error("--tags-from needs --restore-login (tools/restored_run.sh)")
+    if args.tags_from and args.tags:
+        parser.error("--tags-from and --tags are different routes; use one")
     if (args.tags_list or args.tags_save) and not args.tags:
         parser.error("--tags-list/--tags-save need --tags")
     if args.auto_resync and not args.macadi:
@@ -524,6 +531,11 @@ def main():
 
                 async def after_login(logged_in):
                     return await run_tags(logged_in, list_only=args.tags_list, save=args.tags_save)
+            if args.tags_from:
+                from tag_keys import fetch_saved
+
+                async def after_login(logged_in):
+                    return await fetch_saved(logged_in, args.tags_from)
             resyncer = None
             if args.auto_resync:
                 from resync import Resyncer
@@ -531,7 +543,7 @@ def main():
                 resyncer.preflight = args.preflight
                 install_auto_resync(account, resyncer)
             if args.restore_login:
-                return await run_restored(account, args.macadi, resyncer, after_login)
+                return await run_restored(account, args.macadi, resyncer, after_login, needs_password=not args.tags_from)
             return await authenticate(account, args.state_dir, client_info, args.sms,
                                       args.save_session, args.reports, args.watch, args.macadi,
                                       args.watch_interval, args.watch_other_after, not args.no_request_push,

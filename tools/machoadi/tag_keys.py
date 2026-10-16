@@ -110,6 +110,37 @@ async def read_accessories(store, keys, say=print) -> list:  # noqa: ANN001
     return accessories_from_records(decrypted)
 
 
+async def print_locations(account, accessories, say=print) -> None:  # noqa: ANN001
+    """Fetch each accessory's reports with the library's own fetcher and print the newest few (local only)."""
+    for accessory in accessories:
+        try:
+            reports = await account.fetch_location_history(accessory)
+        except Exception as error:  # noqa: BLE001 - report per tag, keep going
+            say(f"[tags] {accessory.name or '?'}: location fetch failed: {type(error).__name__}: {error}")
+            continue
+        if isinstance(reports, dict):
+            reports = [r for group in reports.values() for r in group]
+        say(f"[tags] {accessory.name or '?'}: {len(reports)} report(s)")
+        for report in sorted(reports, key=lambda r: r.timestamp)[-5:]:
+            say(f"    {report.timestamp.isoformat()}  {report.latitude:.5f}, {report.longitude:.5f}  "
+                f"+-{report.horizontal_accuracy} m")
+
+
+async def fetch_saved(account, path: str, say=print) -> int:  # noqa: ANN001
+    """Locations of the accessories saved by `--tags-save`: no keychain, no passcode, no escrow."""
+    from findmy import FindMyAccessory  # noqa: PLC0415
+
+    try:
+        data = json.loads(Path(path).read_text())
+    except (OSError, ValueError) as error:
+        say(f"[tags] cannot read {path}: {type(error).__name__}")
+        return 1
+    accessories = [FindMyAccessory.from_json(item) for item in data]
+    say(f"[tags] {len(accessories)} saved accessory/ies: " + ", ".join(a.name or "?" for a in accessories))
+    await print_locations(account, accessories, say)
+    return 0
+
+
 async def run(account, *, list_only: bool = False, save: str | None = None, days: int = 7,  # noqa: ANN001, PLR0912
               ask=input, ask_secret=getpass.getpass, say=print) -> int:  # noqa: ANN001
     from findmy.cloudkit import AsyncBeaconStore  # noqa: PLC0415
@@ -169,18 +200,7 @@ async def run(account, *, list_only: bool = False, save: str | None = None, days
                 json.dump(payload, stream, default=str)
             say(f"[tags] accessories (with their master keys) saved, mode 0600: {Path(save)}")
 
-        for accessory in accessories:
-            try:
-                reports = await account.fetch_location_history(accessory)
-            except Exception as error:  # noqa: BLE001 - report per tag, keep going
-                say(f"[tags] {accessory.name or '?'}: location fetch failed: {type(error).__name__}: {error}")
-                continue
-            if isinstance(reports, dict):
-                reports = [r for group in reports.values() for r in group]
-            say(f"[tags] {accessory.name or '?'}: {len(reports)} report(s)")
-            for report in sorted(reports, key=lambda r: r.timestamp)[-5:]:
-                say(f"    {report.timestamp.isoformat()}  {report.latitude:.5f}, {report.longitude:.5f}  "
-                    f"+-{report.horizontal_accuracy} m")
+        await print_locations(account, accessories, say)
         return 0
     finally:
         await session.close()
