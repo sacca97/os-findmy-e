@@ -58,13 +58,8 @@ pub struct Sync {
 
 pub struct CoreAdi {
     vm: Vm,
-    image: Vec<u8>,
     dispatch: u64,
     build: &'static str,
-    host_uuid: Option<[u8; 16]>,
-    frozen_time: Option<u64>,
-    /// Set once `initialize` has run, so a recycled VM is initialized the same way.
-    initialized: bool,
 }
 
 fn be32(v: u32) -> [u8; 4] {
@@ -88,44 +83,28 @@ impl CoreAdi {
     pub fn with_dispatch(image: &[u8], dispatch: u64) -> Result<CoreAdi, Error> {
         Ok(CoreAdi {
             vm: Vm::new(image)?,
-            image: image.to_vec(),
             dispatch,
             build: "unlisted build",
-            host_uuid: None,
-            frozen_time: None,
-            initialized: false,
         })
     }
 
     pub fn set_host_uuid(&mut self, uuid: [u8; 16]) {
-        self.host_uuid = Some(uuid);
         self.vm.set_host_uuid(uuid);
     }
 
     /// Pin the emulated clock to `secs` since the epoch (tests); `None` is the real clock.
     pub fn set_frozen_time(&mut self, secs: Option<u64>) {
-        self.frozen_time = secs;
         self.vm.set_frozen_time(secs);
     }
 
-    /// Rebuild the VM when the emulated heap is nearly full, carrying over the store and settings.
-    /// The library never frees its large work buffers (see `vm.rs`), so a long-lived process
-    /// recycles instead; this costs one cold start (~60 ms) every few dozen requests.
-    fn recycle_if_needed(&mut self) -> Result<(), Error> {
-        if self.vm.heap_used() < Vm::heap_capacity() / 4 * 3 {
-            return Ok(());
-        }
-        let files = std::mem::take(self.vm.files_mut());
-        self.vm = Vm::new(&self.image)?;
-        *self.vm.files_mut() = files;
-        if let Some(u) = self.host_uuid {
-            self.vm.set_host_uuid(u);
-        }
-        self.vm.set_frozen_time(self.frozen_time);
-        if self.initialized {
-            self.call("Initialize", &[])?;
-        }
-        Ok(())
+    /// Start a session the way a fresh process would: reset the VM to its post-load snapshot (the
+    /// store, host UUID and clock are kept) and call `Initialize`. One session is, for example, one
+    /// Anisette header set (`is_machine_provisioned`, `request_otp`, `get_routing`), or one
+    /// provisioning (`provisioning_start` then `provisioning_end`, which must share a session).
+    /// This replaces the heap management a long-lived library would need: nothing accumulates.
+    pub fn begin_session(&mut self) -> Result<Reply, Error> {
+        self.vm.reset_session()?;
+        self.initialize()
     }
 
     pub fn build(&self) -> &'static str {
@@ -183,7 +162,6 @@ impl CoreAdi {
 
     pub fn initialize(&mut self) -> Result<Reply, Error> {
         self.vm.scratch_reset();
-        self.initialized = true;
         Ok(self.call("Initialize", &[])?.0)
     }
 
@@ -199,7 +177,6 @@ impl CoreAdi {
     }
 
     pub fn request_otp(&mut self, ds_id: i64) -> Result<Otp, Error> {
-        self.recycle_if_needed()?;
         self.vm.scratch_reset();
         let (mid_p, mid_l, otp_p, otp_l) = (self.cell(0)?, self.cell(0)?, self.cell(0)?, self.cell(0)?);
         let mut m = ds_id.to_be_bytes().to_vec();
@@ -217,7 +194,6 @@ impl CoreAdi {
     }
 
     pub fn provisioning_start(&mut self, ds_id: i64, spim: &[u8]) -> Result<ProvisioningStart, Error> {
-        self.recycle_if_needed()?;
         self.vm.scratch_reset();
         let spim_buf = self.input(spim)?;
         let (cpim_p, cpim_l, session) = (self.cell(0)?, self.cell(0)?, self.cell(0)?);
@@ -232,7 +208,6 @@ impl CoreAdi {
     }
 
     pub fn provisioning_end(&mut self, session: u32, ptm: &[u8], tk: &[u8]) -> Result<Reply, Error> {
-        self.recycle_if_needed()?;
         self.vm.scratch_reset();
         let (ptm_buf, tk_buf) = (self.input(ptm)?, self.input(tk)?);
         let mut m = be32(session).to_vec();
@@ -244,7 +219,6 @@ impl CoreAdi {
     }
 
     pub fn synchronize(&mut self, ds_id: i64, sim: &[u8]) -> Result<Sync, Error> {
-        self.recycle_if_needed()?;
         self.vm.scratch_reset();
         let sim_buf = self.input(sim)?;
         let (mid_p, mid_l, srm_p, srm_l) = (self.cell(0)?, self.cell(0)?, self.cell(0)?, self.cell(0)?);

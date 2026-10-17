@@ -17,8 +17,7 @@ use crate::Error;
 const PAGE: u64 = 0x1000;
 const RETURN_ADDRESS: u64 = 0x4000_0000;
 const HEAP_ADDRESS: u64 = 0x4001_0000;
-const HEAP_SIZE: u64 = 0x0400_0000;
-const REUSE_LIMIT: u64 = 0x1_0000;
+const HEAP_SIZE: u64 = 0x0100_0000;
 const STACK_ADDRESS: u64 = 0x5000_0000;
 const STACK_SIZE: u64 = 0x0020_0000;
 const STUB_ADDRESS: u64 = 0x6000_0000;
@@ -71,7 +70,6 @@ enum H {
     Errno,
     ObjcMsgSend,
     Malloc,
-    Free,
     Open,
     Close,
     Read,
@@ -105,8 +103,7 @@ fn handler_for(name: &str) -> Option<H> {
         "CFErrorGetCode" | "CFErrorGetDomain" | "CFRelease" | "CSBackupIsItemExcluded" | "notify_post" => H::Ret(0),
         "CSBackupSetItemExcluded" | "CFFileSecuritySetMode" | "CFURLSetResourcePropertyForKey" => H::Ret(1),
         "malloc" => H::Malloc,
-        "free" => H::Free,
-        "fchmod" | "fcntl" | "lockf" => H::Ret(0),
+        "free" | "fchmod" | "fcntl" | "lockf" => H::Ret(0),
         "open" => H::Open,
         "close" => H::Close,
         "read" => H::Read,
@@ -136,7 +133,6 @@ struct Env {
     object_of: HashMap<String, u64>,
     key_by_object: HashMap<u64, String>,
     heap_cur: u64,
-    free_blocks: HashMap<u64, Vec<u64>>,
     scratch_cur: u64,
     scratch_base: u64,
     obj_cur: u64,
@@ -273,36 +269,17 @@ impl Env {
                 }
             }
             H::Malloc => {
-                // 16-byte header (the block size) before the pointer. Small freed blocks are reused by
-                // exact size class and zeroed; blocks of REUSE_LIMIT and up are never recycled, because
-                // reusing the library's 512 KiB work buffers makes Unicorn retranslate its code on every
-                // call (about 5x slower). The caller recycles the whole VM before the heap fills.
+                // Bump allocator, like the validated Python harness. Nothing is freed: the VM is
+                // reset to its post-load snapshot between sessions (`Vm::reset_session`) instead.
                 let size = (arg(uc, 0).max(0x20) + 0xF) & !0xF;
-                if size < REUSE_LIMIT {
-                    if let Some(p) = self.free_blocks.get_mut(&size).and_then(Vec::pop) {
-                        let _ = uc.mem_write(p, &vec![0u8; size as usize]);
-                        return Some(p);
-                    }
-                }
-                let ptr = self.heap_cur + 16;
-                if ptr + size > HEAP_ADDRESS + HEAP_SIZE {
+                let addr = self.heap_cur;
+                if addr + size > HEAP_ADDRESS + HEAP_SIZE {
                     self.fault = Some("emulated heap exhausted".into());
                     let _ = uc.emu_stop();
                     return None;
                 }
-                w64(uc, self.heap_cur, size);
-                self.heap_cur = ptr + size;
-                ptr
-            }
-            H::Free => {
-                let p = arg(uc, 0);
-                if p >= HEAP_ADDRESS + 16 && p < self.heap_cur {
-                    let size = r64(uc, p - 16);
-                    if size < REUSE_LIMIT {
-                        self.free_blocks.entry(size).or_default().push(p);
-                    }
-                }
-                0
+                self.heap_cur = addr + size;
+                addr
             }
             H::Open => {
                 let path = cstr(uc, arg(uc, 0));
@@ -447,8 +424,20 @@ impl Env {
     }
 }
 
+/// The pristine state right after load and binding, before any call into the library.
+struct Snapshot {
+    segments: Vec<(u64, Vec<u8>)>,
+    cells: Vec<u8>,
+    heap_cur: u64,
+    obj_cur: u64,
+    next_url: u64,
+    next_fd: u64,
+}
+
 pub struct Vm {
     uc: Uc<'static>,
+    snapshot: Snapshot,
+    zeros: Vec<u8>,
 }
 
 impl Vm {
@@ -559,7 +548,21 @@ impl Vm {
                 false
             },
         )?;
-        Ok(Vm { uc })
+        let mut segments = Vec::new();
+        for seg in macho.segments.iter().filter(|s| s.writable && s.vmsize != 0) {
+            segments.push((seg.vmaddr, uc.mem_read_as_vec(seg.vmaddr, seg.vmsize as usize)?));
+        }
+        let cells = uc.mem_read_as_vec(DATA_ADDRESS, PAGE as usize)?;
+        let env = uc.get_data();
+        let snapshot = Snapshot {
+            segments,
+            cells,
+            heap_cur: env.heap_cur,
+            obj_cur: env.obj_cur,
+            next_url: env.next_url,
+            next_fd: env.next_fd,
+        };
+        Ok(Vm { uc, snapshot, zeros: vec![0u8; STACK_SIZE as usize] })
     }
 
     /// Run `address(args...)` until it returns; the result is `rax`.
@@ -584,6 +587,36 @@ impl Vm {
                 Err(Error::Emulation(format!("emulation failed at rip={rip:#x}: {e:?}")))
             }
         }
+    }
+
+    /// Return the VM to the state it had right after loading, as if a fresh process had started.
+    /// The store (`files`), host UUID and clock are kept; library memory (data segment, heap, stack,
+    /// scratch), descriptors and allocator counters are not. Translated code stays cached, which is
+    /// what makes this cheap, and nothing leaks because the heap restarts from empty. Call it
+    /// between sessions, never inside one (a provisioning session id lives in library memory).
+    pub fn reset_session(&mut self) -> Result<(), Error> {
+        let uc = &mut self.uc;
+        for (addr, bytes) in &self.snapshot.segments {
+            uc.mem_write(*addr, bytes)?;
+        }
+        uc.mem_write(DATA_ADDRESS, &self.snapshot.cells)?;
+        uc.mem_unmap(HEAP_ADDRESS, HEAP_SIZE)?;
+        uc.mem_map(HEAP_ADDRESS, HEAP_SIZE, Prot::ALL)?;
+        uc.mem_write(STACK_ADDRESS, &self.zeros)?;
+        let env = uc.get_data_mut();
+        let (base, dirty) = (env.scratch_base, (env.scratch_cur - env.scratch_base) as usize);
+        env.heap_cur = self.snapshot.heap_cur;
+        env.obj_cur = self.snapshot.obj_cur;
+        env.next_url = self.snapshot.next_url;
+        env.next_fd = self.snapshot.next_fd;
+        env.scratch_cur = env.scratch_base;
+        env.fds.clear();
+        env.urls.clear();
+        env.fault = None;
+        let errno = env.errno_addr;
+        uc.mem_write(errno, &[0u8; 8])?;
+        uc.mem_write(base, &self.zeros[..dirty.min(self.zeros.len())])?;
+        Ok(())
     }
 
     /// Per-call scratch (request buffers, out-cells). Reset between top-level calls.
@@ -636,11 +669,6 @@ impl Vm {
     /// Pin `gettimeofday` to `secs` (tests, byte-for-byte comparison); `None` restores the real clock.
     pub fn set_frozen_time(&mut self, secs: Option<u64>) {
         self.uc.get_data_mut().frozen_time = secs;
-    }
-
-    /// High-water mark of the emulated heap, in bytes (freed blocks are reused, not returned).
-    pub fn heap_capacity() -> u64 {
-        HEAP_SIZE
     }
 
     pub fn heap_used(&self) -> u64 {

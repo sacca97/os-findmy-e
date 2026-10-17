@@ -13,6 +13,7 @@ pub struct Segment {
     pub vmsize: u64,
     pub fileoff: u64,
     pub filesize: u64,
+    pub writable: bool,
 }
 
 pub struct Bind {
@@ -85,6 +86,7 @@ impl MachO {
                     vmsize: u64_at(d, off + 32)?,
                     fileoff: u64_at(d, off + 40)?,
                     filesize: u64_at(d, off + 48)?,
+                    writable: u32_at(d, off + 60)? & 2 != 0,
                 }),
                 LC_DYLD_INFO | LC_DYLD_INFO_ONLY => {
                     bind = (u32_at(d, off + 16)? as usize, u32_at(d, off + 20)? as usize);
