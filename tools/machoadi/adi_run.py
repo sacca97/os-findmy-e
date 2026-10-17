@@ -26,6 +26,7 @@ status means the operation failed and ``payload[0:4]`` holds the error code.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import os
 import struct
 import sys
@@ -45,9 +46,25 @@ COREADI = Path(
     / "CoreADI.framework/Versions/A/CoreADI.x86_64"
 )
 
-# _vdfut768ig. The offset belongs to one build: 0x979A0 is iTunes 4.19, 0x17BF60 is macOS 15.8.1's
-# CoreADI (ext/macos15). Set COREADI_PATH and COREADI_DISPATCH together to try another build.
-DISPATCH = int(os.environ.get("COREADI_DISPATCH", "0x979A0"), 0)
+# _vdfut768ig is at a different offset in every build, so the offset is looked up from the sha256
+# of the file actually loaded. A build that is not listed is refused rather than run at a wrong
+# entry point; COREADI_DISPATCH=0x... overrides the lookup for trying a new one.
+BUILDS = {
+    "2eafc3c79c7f41a8afbfbeaaf23ee5dab5ad5bda55ec8e54dbc0ddf1d20ce630": ("iTunes 12.8.3, CoreADI 4.19 (x86_64 slice)", 0x979A0),
+    "6fe4b27f2d75b5f365917a92389bed75542f3ba08197f136262be3b34d19cb5c": ("macOS 15.8.1 24H32 (fat file)", 0x17BF60),
+}
+
+
+def identify_build(data: bytes) -> tuple[str, int]:
+    """(name, dispatcher offset) for a CoreADI image; raises if the build is unknown."""
+    digest = hashlib.sha256(data).hexdigest()
+    override = os.environ.get("COREADI_DISPATCH")
+    if override:
+        return BUILDS.get(digest, ("unlisted build", 0))[0], int(override, 0)
+    if digest not in BUILDS:
+        raise EmulationError(f"unknown CoreADI build sha256 {digest}; set COREADI_DISPATCH to its _vdfut768ig offset")
+    return BUILDS[digest]
+
 
 # Function codes (Dadoum/apple-crates, `adi/src/calls.rs`).
 MAGIC = {
@@ -113,7 +130,9 @@ class CoreADI:
     """A live Mac ADI dispatcher running on a synthetic macOS."""
 
     def __init__(self, path: Path = COREADI, *, log: bool = False) -> None:
-        self.harness = Harness(MachOImage(str(path)))
+        image = MachOImage(str(path))
+        self.build, self.dispatch = identify_build(image.data)
+        self.harness = Harness(image)
         self.stubs = MacStubs(self.harness, log=log)
         self.last_insns = 0
 
@@ -134,7 +153,7 @@ class CoreADI:
         h.write_u32(params + 0x0C, 4)
         h.write_u32(params + 0x10, 0)
 
-        rc = s32(h.invoke(DISPATCH, [MAGIC[name], params]))
+        rc = s32(h.invoke(self.dispatch, [MAGIC[name], params]))
         ret = struct.unpack(">i", h.mem_read(buf_addr, 4))[0]
         h.mem_write(buf_addr + 4, b"\x00" * 4)
         return rc, ret, buf_addr
