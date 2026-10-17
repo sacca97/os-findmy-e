@@ -16,10 +16,14 @@ path = "src/main.rs"
 [dependencies]
 unicorn-engine = { version = "2.1", default-features = false, features = ["arch_x86"] }
 sha2 = "0.10"
+jni = { version = "0.21", optional = true }
+
+[features]
+# JNI entry points for dev.osfindmy.adi.CoreAdi (the Android wrapper); build with --features jni
+jni = ["dep:jni"]
 
 [profile.release]
 opt-level = 3
 lto = true
 codegen-units = 1
 strip = true
-panic = "abort"

@@ -2,10 +2,13 @@
 //! host UUID, and ask it for Anisette (MID/OTP), provisioning and synchronization messages.
 
 mod adi;
+pub mod capi;
+#[cfg(feature = "jni")]
+mod jni_api;
 mod macho;
 mod vm;
 
-pub use adi::{CoreAdi, Otp, ProvisioningStart, Reply, Sync};
+pub use adi::{CoreAdi, Headers, Otp, ProvisioningStart, Reply, Sync};
 pub use vm::{Vm, STORE_DIR};
 
 use sha2::{Digest, Sha256};
@@ -16,6 +19,10 @@ pub enum Error {
     Emulation(String),
     Unicorn(unicorn_engine::unicorn_const::uc_error),
     UnknownBuild(String),
+    /// The library answered with a negative status (`op` is the ADI call).
+    Adi { op: &'static str, ret: i32 },
+    NotProvisioned,
+    AlreadyProvisioned,
 }
 
 impl std::fmt::Display for Error {
@@ -24,6 +31,9 @@ impl std::fmt::Display for Error {
             Error::MachO(m) => write!(f, "mach-o: {m}"),
             Error::Emulation(m) => write!(f, "emulation: {m}"),
             Error::Unicorn(e) => write!(f, "unicorn: {e:?}"),
+            Error::Adi { op, ret } => write!(f, "{op} failed: {ret}"),
+            Error::NotProvisioned => write!(f, "machine is not provisioned"),
+            Error::AlreadyProvisioned => write!(f, "machine is already provisioned"),
             Error::UnknownBuild(h) => {
                 write!(f, "unknown CoreADI build sha256 {h}; pass its _vdfut768ig offset explicitly")
             }

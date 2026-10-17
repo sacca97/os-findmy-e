@@ -28,7 +28,36 @@ about 90 ms while Unicorn translates). Two things that matter and are easy to ge
   Python process per session against one Rust process, and compares every MID, OTP, routing value
   and the store hash.
 
-Not done yet: the C ABI / JNI wrapper, the Android cross-build, provisioning and resync from Rust
-(the `CoreAdi` methods exist; only OTP is checked against Python).
+## Interfaces
+
+* **Rust**: `CoreAdi` (`headers`, `provisioning_begin`/`provisioning_finish`, `sync`, `update_routing`,
+  `store_put`/`store_files`). Each is one session.
+* **C**: `adi-core/adi_core.h` (`adi_open`, `adi_headers`, ...), buffers owned by the library.
+  `adi-core/tests/smoke.c` exercises it.
+* **Java/Android**: `android/dev/osfindmy/adi/CoreAdi.java` over JNI (`--features jni`). It throws
+  `NotProvisionedException`, `AlreadyProvisionedException` or `AdiException`. Call it from one
+  background thread; each call is a session.
+
+## Android build
+
+    NDK=/path/to/android-ndk-r27c native/android/build.sh [arm64-v8a] [x86_64]
+
+Needs `rustup target add aarch64-linux-android x86_64-linux-android`, cmake and the NDK. It writes
+`android/jniLibs/<abi>/libadi_core.so` (1.3 MB each, depending only on libc, libm, libdl) and a
+test binary under `android/build/bin/<abi>/`. Three NDK quirks the script handles: Android has no
+`libpthread` (an empty stub is linked), bindgen needs the NDK sysroot, and arm64 TCG needs
+`__clear_cache` from the NDK's compiler-rt builtins (linked explicitly).
+
+Tested on a Pixel 5 (arm64-v8a, Android 16): the 60-session pinned-clock sequence is byte-identical
+to the host and the Python harness; about 60 ms per session (the x86 code is emulated on ARM),
+first session about 210 ms. Not tested yet: the JNI library inside an APK, and the x86_64 ABI on
+an emulator.
+
+## What the app must do
+
+* Ship (or let the user supply) the CoreADI file; `CoreAdi.open` identifies it by sha256.
+* Keep the host UUID (16 bytes) with the store and never change it: the MID derives from it.
+* Persist `exportStore()` after every `headers`, provisioning or `sync`; restore it with `importStore`.
+* The Apple-side protocol (provisioning exchange, resync POST, headers) is still in the Python tools.
 
 License note: the `unicorn-engine` crate is GPL-2.0.

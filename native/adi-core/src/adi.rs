@@ -2,7 +2,7 @@
 //! Dadoum/apple-crates `adi/src/{core_adi,calls}.rs`. Requests are big-endian bincode; pointers
 //! inside a message are 8-byte big-endian addresses *inside the emulated process*.
 
-use crate::vm::Vm;
+use crate::vm::{Vm, STORE_DIR};
 use crate::{identify_build, Error};
 
 fn code(name: &str) -> u32 {
@@ -54,6 +54,17 @@ pub struct Sync {
     pub reply: Reply,
     pub mid: Vec<u8>,
     pub srm: Vec<u8>,
+}
+
+/// What Apple's login and Find My services want from a machine, for one request.
+#[derive(Debug)]
+pub struct Headers {
+    /// `X-Apple-I-MD-M`, raw bytes (base64 it for the header).
+    pub mid: Vec<u8>,
+    /// `X-Apple-I-MD`, raw bytes.
+    pub otp: Vec<u8>,
+    /// `X-Apple-I-MD-RINFO`.
+    pub routing: u64,
 }
 
 pub struct CoreAdi {
@@ -255,5 +266,84 @@ impl CoreAdi {
         m.extend(be64(cell));
         let (reply, _) = self.call("GetIDMSRouting", &m)?;
         Ok((reply, self.vm.read_u64(cell)?))
+    }
+
+    // -- high level: one call is one session --------------------------------------------------
+
+    /// Put one store file (as saved by [`CoreAdi::store_files`]) into the virtual store. The legacy
+    /// whole-machine `adi.pb` is ignored: when it is present the library reports the machine
+    /// unprovisioned without reading the per-user blob (see `mac_anisette.py`).
+    pub fn store_put(&mut self, name: &str, data: &[u8]) {
+        if name != "adi.pb" {
+            self.vm.files_mut().insert(format!("{STORE_DIR}/{name}"), data.to_vec());
+        }
+    }
+
+    /// The store as `(file name, bytes)`; persist it after every call that can change it.
+    pub fn store_files(&self) -> Vec<(String, Vec<u8>)> {
+        let prefix = format!("{STORE_DIR}/");
+        self.vm
+            .files()
+            .iter()
+            .filter_map(|(k, v)| k.strip_prefix(&prefix).map(|n| (n.to_string(), v.clone())))
+            .collect()
+    }
+
+    fn check(op: &'static str, r: Reply) -> Result<(), Error> {
+        if r.rc < 0 || r.ret < 0 {
+            return Err(Error::Adi { op, ret: if r.ret < 0 { r.ret } else { r.rc } });
+        }
+        Ok(())
+    }
+
+    /// One session: the headers a machine puts on a request. Persist [`CoreAdi::store_files`] after.
+    pub fn headers(&mut self, ds_id: i64) -> Result<Headers, Error> {
+        self.begin_session()?;
+        if self.is_machine_provisioned(ds_id)?.ret != 0 {
+            return Err(Error::NotProvisioned);
+        }
+        let otp = self.request_otp(ds_id)?;
+        Self::check("RequestOTP", otp.reply)?;
+        let (r, routing) = self.get_routing(ds_id)?;
+        Self::check("GetIDMSRouting", r)?;
+        Ok(Headers { mid: otp.mid, otp: otp.otp, routing })
+    }
+
+    /// Start provisioning with Apple's `spim`; returns `(cpim, session)`. Finish with
+    /// [`CoreAdi::provisioning_finish`] and nothing else in between: they share one session.
+    pub fn provisioning_begin(&mut self, ds_id: i64, spim: &[u8]) -> Result<(Vec<u8>, u32), Error> {
+        self.begin_session()?;
+        if self.is_machine_provisioned(ds_id)?.ret == 0 {
+            return Err(Error::AlreadyProvisioned);
+        }
+        let s = self.provisioning_start(ds_id, spim)?;
+        Self::check("ProvisioningStart", s.reply)?;
+        Ok((s.cpim, s.session))
+    }
+
+    pub fn provisioning_finish(
+        &mut self,
+        ds_id: i64,
+        session: u32,
+        ptm: &[u8],
+        tk: &[u8],
+        routing: u64,
+    ) -> Result<(), Error> {
+        Self::check("ProvisioningEnd", self.provisioning_end(session, ptm, tk)?)?;
+        Self::check("SetIDMSRouting", self.set_routing(ds_id, routing)?)
+    }
+
+    /// Answer Apple's resync request: `(mid, srm)` for a `sim` taken from the 434 reply.
+    pub fn sync(&mut self, ds_id: i64, sim: &[u8]) -> Result<(Vec<u8>, Vec<u8>), Error> {
+        self.begin_session()?;
+        let s = self.synchronize(ds_id, sim)?;
+        Self::check("Synchronize", s.reply)?;
+        Ok((s.mid, s.srm))
+    }
+
+    /// Store the routing value Apple returns (`X-Apple-I-MD-RINFO`) after a resync.
+    pub fn update_routing(&mut self, ds_id: i64, routing: u64) -> Result<(), Error> {
+        self.begin_session()?;
+        Self::check("SetIDMSRouting", self.set_routing(ds_id, routing)?)
     }
 }
