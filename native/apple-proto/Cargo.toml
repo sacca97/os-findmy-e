@@ -1,0 +1,13 @@
+[package]
+name = "apple-proto"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "CloudKit and Cuttlefish messages (prost) for the Find My protocol"
+
+[dependencies]
+prost.workspace = true
+
+[build-dependencies]
+prost-build.workspace = true
+protoc-bin-vendored.workspace = true

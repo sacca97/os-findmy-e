@@ -1,0 +1,56 @@
+[package]
+name = "apple-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "The Apple-side Find My protocol in Rust: provisioning, login, reports, CloudKit, keychain recovery"
+
+[dependencies]
+adi-core.workspace = true
+apple-proto.workspace = true
+prost.workspace = true
+
+serde.workspace = true
+serde_json.workspace = true
+bytes.workspace = true
+
+thiserror.workspace = true
+zeroize.workspace = true
+
+sha2.workspace = true
+hmac.workspace = true
+hkdf.workspace = true
+pbkdf2.workspace = true
+aes.workspace = true
+aes-gcm.workspace = true
+aes-siv.workspace = true
+cbc.workspace = true
+
+p224.workspace = true
+p256.workspace = true
+p384.workspace = true
+elliptic-curve.workspace = true
+num-bigint.workspace = true
+num-traits.workspace = true
+rand_core.workspace = true
+rand.workspace = true
+
+tokio.workspace = true
+reqwest.workspace = true
+rustls.workspace = true
+webpki-roots.workspace = true
+
+base64.workspace = true
+plist.workspace = true
+regex.workspace = true
+httpdate.workspace = true
+time.workspace = true
+flate2.workspace = true
+aes-kw.workspace = true
+ghash.workspace = true
+universal-hash.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+prost.workspace = true
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "time", "net", "io-util", "sync"] }

@@ -1,6 +1,6 @@
-//! JNI entry points for `dev.osfindmy.adi.CoreAdi` (see `native/android/CoreAdi.kt`).
+//! JNI entry points for `com.sacca.openfinder.adi.CoreAdi` (see `native/android/CoreAdi.kt`).
 //! Errors become Java exceptions: `NotProvisionedException`, `AlreadyProvisionedException` or
-//! `AdiException` (all in `dev.osfindmy.adi`); a panic becomes an `AdiException` too.
+//! `AdiException` (all in `com.sacca.openfinder.adi`); a panic becomes an `AdiException` too.
 
 use std::panic::{catch_unwind, AssertUnwindSafe};
 
@@ -11,7 +11,7 @@ use jni::JNIEnv;
 use crate::capi::Handle;
 use crate::{CoreAdi, Error};
 
-const PKG: &str = "dev/osfindmy/adi/";
+const PKG: &str = "com/sacca/openfinder/adi/";
 
 fn throw(env: &mut JNIEnv, e: &Error) {
     let class = match e {
@@ -68,7 +68,7 @@ fn array_of<'l>(env: &mut JNIEnv<'l>, items: &[&[u8]]) -> Result<JObjectArray<'l
 }
 
 #[no_mangle]
-pub extern "system" fn Java_dev_osfindmy_adi_CoreAdi_nativeOpen<'l>(mut env: JNIEnv<'l>, _: JClass<'l>, image: JByteArray<'l>) -> jlong {
+pub extern "system" fn Java_com_sacca_openfinder_adi_CoreAdi_nativeOpen<'l>(mut env: JNIEnv<'l>, _: JClass<'l>, image: JByteArray<'l>) -> jlong {
     run(&mut env, 0, |env| {
         let adi = CoreAdi::new(&bytes(env, &image)?)?;
         Ok(Box::into_raw(Box::new(Handle::new(adi))) as jlong)
@@ -76,7 +76,7 @@ pub extern "system" fn Java_dev_osfindmy_adi_CoreAdi_nativeOpen<'l>(mut env: JNI
 }
 
 #[no_mangle]
-pub extern "system" fn Java_dev_osfindmy_adi_CoreAdi_nativeClose<'l>(_env: JNIEnv<'l>, _: JClass<'l>, h: jlong) {
+pub extern "system" fn Java_com_sacca_openfinder_adi_CoreAdi_nativeClose<'l>(_env: JNIEnv<'l>, _: JClass<'l>, h: jlong) {
     if h != 0 {
         // SAFETY: see `handle`; called once from `CoreAdi.close`.
         drop(unsafe { Box::from_raw(h as *mut Handle) });
@@ -84,7 +84,7 @@ pub extern "system" fn Java_dev_osfindmy_adi_CoreAdi_nativeClose<'l>(_env: JNIEn
 }
 
 #[no_mangle]
-pub extern "system" fn Java_dev_osfindmy_adi_CoreAdi_nativeBuild<'l>(mut env: JNIEnv<'l>, _: JClass<'l>, h: jlong) -> JString<'l> {
+pub extern "system" fn Java_com_sacca_openfinder_adi_CoreAdi_nativeBuild<'l>(mut env: JNIEnv<'l>, _: JClass<'l>, h: jlong) -> JString<'l> {
     let null = JString::from(JObject::null());
     run(&mut env, null, |env| {
         let name = handle(h)?.build();
@@ -93,7 +93,7 @@ pub extern "system" fn Java_dev_osfindmy_adi_CoreAdi_nativeBuild<'l>(mut env: JN
 }
 
 #[no_mangle]
-pub extern "system" fn Java_dev_osfindmy_adi_CoreAdi_nativeSetHostUuid<'l>(mut env: JNIEnv<'l>, _: JClass<'l>, h: jlong, uuid: JByteArray<'l>) {
+pub extern "system" fn Java_com_sacca_openfinder_adi_CoreAdi_nativeSetHostUuid<'l>(mut env: JNIEnv<'l>, _: JClass<'l>, h: jlong, uuid: JByteArray<'l>) {
     run(&mut env, (), |env| {
         let u: [u8; 16] = bytes(env, &uuid)?.try_into().map_err(|_| Error::Emulation("host uuid needs 16 bytes".into()))?;
         handle(h)?.set_host_uuid(u);
@@ -102,7 +102,7 @@ pub extern "system" fn Java_dev_osfindmy_adi_CoreAdi_nativeSetHostUuid<'l>(mut e
 }
 
 #[no_mangle]
-pub extern "system" fn Java_dev_osfindmy_adi_CoreAdi_nativeSetFrozenTime<'l>(mut env: JNIEnv<'l>, _: JClass<'l>, h: jlong, secs: jlong) {
+pub extern "system" fn Java_com_sacca_openfinder_adi_CoreAdi_nativeSetFrozenTime<'l>(mut env: JNIEnv<'l>, _: JClass<'l>, h: jlong, secs: jlong) {
     run(&mut env, (), |_| {
         handle(h)?.set_frozen_time(u64::try_from(secs).ok());
         Ok(())
@@ -110,7 +110,7 @@ pub extern "system" fn Java_dev_osfindmy_adi_CoreAdi_nativeSetFrozenTime<'l>(mut
 }
 
 #[no_mangle]
-pub extern "system" fn Java_dev_osfindmy_adi_CoreAdi_nativeStoreExport<'l>(mut env: JNIEnv<'l>, _: JClass<'l>, h: jlong) -> JByteArray<'l> {
+pub extern "system" fn Java_com_sacca_openfinder_adi_CoreAdi_nativeStoreExport<'l>(mut env: JNIEnv<'l>, _: JClass<'l>, h: jlong) -> JByteArray<'l> {
     let null = JByteArray::from(JObject::null());
     run(&mut env, null, |env| {
         let mut v = Vec::new();
@@ -125,7 +125,7 @@ pub extern "system" fn Java_dev_osfindmy_adi_CoreAdi_nativeStoreExport<'l>(mut e
 }
 
 #[no_mangle]
-pub extern "system" fn Java_dev_osfindmy_adi_CoreAdi_nativeStoreImport<'l>(mut env: JNIEnv<'l>, _: JClass<'l>, h: jlong, data: JByteArray<'l>) {
+pub extern "system" fn Java_com_sacca_openfinder_adi_CoreAdi_nativeStoreImport<'l>(mut env: JNIEnv<'l>, _: JClass<'l>, h: jlong, data: JByteArray<'l>) {
     run(&mut env, (), |env| {
         let raw = bytes(env, &data)?;
         let mut d = raw.as_slice();
@@ -144,7 +144,7 @@ pub extern "system" fn Java_dev_osfindmy_adi_CoreAdi_nativeStoreImport<'l>(mut e
 
 /// `[mid, otp, routing as 8 big-endian bytes]`
 #[no_mangle]
-pub extern "system" fn Java_dev_osfindmy_adi_CoreAdi_nativeHeaders<'l>(mut env: JNIEnv<'l>, _: JClass<'l>, h: jlong, ds: jlong) -> JObjectArray<'l> {
+pub extern "system" fn Java_com_sacca_openfinder_adi_CoreAdi_nativeHeaders<'l>(mut env: JNIEnv<'l>, _: JClass<'l>, h: jlong, ds: jlong) -> JObjectArray<'l> {
     let null = JObjectArray::from(JObject::null());
     run(&mut env, null, |env| {
         let r = handle(h)?.headers(ds)?;
@@ -154,7 +154,7 @@ pub extern "system" fn Java_dev_osfindmy_adi_CoreAdi_nativeHeaders<'l>(mut env: 
 
 /// `[cpim, session as 4 big-endian bytes]`
 #[no_mangle]
-pub extern "system" fn Java_dev_osfindmy_adi_CoreAdi_nativeProvisioningBegin<'l>(
+pub extern "system" fn Java_com_sacca_openfinder_adi_CoreAdi_nativeProvisioningBegin<'l>(
     mut env: JNIEnv<'l>,
     _: JClass<'l>,
     h: jlong,
@@ -169,7 +169,7 @@ pub extern "system" fn Java_dev_osfindmy_adi_CoreAdi_nativeProvisioningBegin<'l>
 }
 
 #[no_mangle]
-pub extern "system" fn Java_dev_osfindmy_adi_CoreAdi_nativeProvisioningFinish<'l>(
+pub extern "system" fn Java_com_sacca_openfinder_adi_CoreAdi_nativeProvisioningFinish<'l>(
     mut env: JNIEnv<'l>,
     _: JClass<'l>,
     h: jlong,
@@ -187,7 +187,7 @@ pub extern "system" fn Java_dev_osfindmy_adi_CoreAdi_nativeProvisioningFinish<'l
 
 /// `[mid, srm]`
 #[no_mangle]
-pub extern "system" fn Java_dev_osfindmy_adi_CoreAdi_nativeSync<'l>(mut env: JNIEnv<'l>, _: JClass<'l>, h: jlong, ds: jlong, sim: JByteArray<'l>) -> JObjectArray<'l> {
+pub extern "system" fn Java_com_sacca_openfinder_adi_CoreAdi_nativeSync<'l>(mut env: JNIEnv<'l>, _: JClass<'l>, h: jlong, ds: jlong, sim: JByteArray<'l>) -> JObjectArray<'l> {
     let null = JObjectArray::from(JObject::null());
     run(&mut env, null, |env| {
         let (mid, srm) = handle(h)?.sync(ds, &bytes(env, &sim)?)?;
@@ -196,6 +196,6 @@ pub extern "system" fn Java_dev_osfindmy_adi_CoreAdi_nativeSync<'l>(mut env: JNI
 }
 
 #[no_mangle]
-pub extern "system" fn Java_dev_osfindmy_adi_CoreAdi_nativeUpdateRouting<'l>(mut env: JNIEnv<'l>, _: JClass<'l>, h: jlong, ds: jlong, routing: jlong) {
+pub extern "system" fn Java_com_sacca_openfinder_adi_CoreAdi_nativeUpdateRouting<'l>(mut env: JNIEnv<'l>, _: JClass<'l>, h: jlong, ds: jlong, routing: jlong) {
     run(&mut env, (), |_| handle(h)?.update_routing(ds, routing as u64))
 }

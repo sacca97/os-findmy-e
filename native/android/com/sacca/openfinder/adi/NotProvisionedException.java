@@ -1,4 +1,4 @@
-package dev.osfindmy.adi;
+package com.sacca.openfinder.adi;
 
 /** The machine has no provisioning in the store: run the provisioning exchange first. */
 public class NotProvisionedException extends AdiException {

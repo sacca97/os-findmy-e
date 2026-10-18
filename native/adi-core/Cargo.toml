@@ -19,11 +19,5 @@ sha2 = "0.10"
 jni = { version = "0.21", optional = true }
 
 [features]
-# JNI entry points for dev.osfindmy.adi.CoreAdi (the Android wrapper); build with --features jni
+# JNI entry points for com.sacca.openfinder.adi.CoreAdi (the Android wrapper); build with --features jni
 jni = ["dep:jni"]
-
-[profile.release]
-opt-level = 3
-lto = true
-codegen-units = 1
-strip = true

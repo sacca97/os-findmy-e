@@ -667,6 +667,9 @@ impl Vm {
     }
 
     /// Pin `gettimeofday` to `secs` (tests, byte-for-byte comparison); `None` restores the real clock.
+    ///
+    /// **Never do this in the app.** A frozen clock makes CoreADI's OTP a constant, and Apple then
+    /// accepts the machine for only about 60 s (`EVIDENCE.md` sections 8 and 9). Production must leave it `None`.
     pub fn set_frozen_time(&mut self, secs: Option<u64>) {
         self.uc.get_data_mut().frozen_time = secs;
     }

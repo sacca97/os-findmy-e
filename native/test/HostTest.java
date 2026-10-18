@@ -1,4 +1,4 @@
-import dev.osfindmy.adi.*;
+import com.sacca.openfinder.adi.*;
 import java.nio.file.*;
 
 /** Host JVM test of the JNI layer: HostTest COREADI HOST_UUID_HEX CLOCK STORE_FILE... */

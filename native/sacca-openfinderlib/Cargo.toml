@@ -1,0 +1,23 @@
+[package]
+name = "sacca-openfinderlib"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "C ABI and JNI entry points for apple-core and adi-core"
+
+[lib]
+name = "sacca_openfinderlib"
+crate-type = ["cdylib", "staticlib", "rlib"]
+
+[dependencies]
+apple-core.workspace = true
+adi-core.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tokio = { workspace = true, features = ["rt-multi-thread", "sync", "time"] }
+zeroize.workspace = true
+base64.workspace = true
+jni = { version = "0.21", optional = true }
+
+[features]
+jni = ["dep:jni"]

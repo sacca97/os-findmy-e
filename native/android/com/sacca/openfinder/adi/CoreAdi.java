@@ -1,4 +1,4 @@
-package dev.osfindmy.adi;
+package com.sacca.openfinder.adi;
 
 /**
  * Apple's Mac CoreADI, emulated: the source of Anisette headers for a provisioned machine.

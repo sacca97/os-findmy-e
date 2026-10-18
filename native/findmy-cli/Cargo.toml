@@ -1,0 +1,22 @@
+[package]
+name = "findmy-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Manual live-validation CLI for apple-core (touches Apple; only run with the owner's go-ahead)"
+
+[[bin]]
+name = "findmy"
+path = "src/main.rs"
+
+[dependencies]
+apple-core.workspace = true
+adi-core.workspace = true
+tokio = { workspace = true, features = ["rt-multi-thread", "macros", "time"] }
+serde_json.workspace = true
+base64.workspace = true
+time.workspace = true
+zeroize.workspace = true
+rpassword = "7"
+rand.workspace = true
+reqwest.workspace = true
