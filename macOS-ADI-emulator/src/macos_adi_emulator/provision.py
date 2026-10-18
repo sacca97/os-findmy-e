@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Drive the emulated macOS 26 `adid`: one live provisioning round, then
+"""Drive the emulated macOS `adid`: one live provisioning round, then
 offline use of the store it writes.
 
 Unlike the 4.19 dylib, the macOS 26 daemon keeps its machine store at
@@ -173,11 +173,15 @@ def main() -> int:
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("command", nargs="?", default="provision",
                     choices=("provision", "status", "headers"))
+    default_state = Path.home() / ".local" / "state" / "macos-adi"
+    previous_state = Path.home() / ".local" / "state" / "anisette-mac26"
+    if previous_state.exists() and not default_state.exists():
+        default_state = previous_state
     ap.add_argument(
         "--state",
         default=os.environ.get(
-            "ANISETTE_MAC26_STATE",
-            Path.home() / ".local" / "state" / "anisette-mac26",
+            "MACOS_ADI_STATE",
+            os.environ.get("ANISETTE_MAC26_STATE", default_state),
         ),
     )
     args = ap.parse_args()

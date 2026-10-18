@@ -1,5 +1,5 @@
-"""macOS ADI emulator and Anisette backend."""
+"""Emulate Apple's macOS ADI daemon."""
 
-from .backend import Mac26Backend
+from .adi import Adid, AdidError
 
-__all__ = ["Mac26Backend"]
+__all__ = ["Adid", "AdidError"]

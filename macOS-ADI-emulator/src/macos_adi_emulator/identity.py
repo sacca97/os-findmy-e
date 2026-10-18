@@ -8,7 +8,7 @@ _SERIAL_ALPHABET = "0123456789ABCDEFGHJKLMNPQRSTUVWXYZ"
 
 
 def mint_identity() -> dict[str, str | int | None]:
-    """Create the client identity used for macOS 26 ADI provisioning."""
+    """Create a client identity for ADI provisioning."""
     return {
         "device_id": f"{_UDID_PREFIX}-{secrets.token_hex(8).upper()}",
         "local_user_uuid": secrets.token_hex(16).upper(),
