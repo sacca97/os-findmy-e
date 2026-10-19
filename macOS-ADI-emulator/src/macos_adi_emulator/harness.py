@@ -110,12 +110,17 @@ class Harness:
     def __init__(self, image: MachOImage) -> None:
         self.image = image
         self.uc = Uc(UC_ARCH_X86, UC_MODE_64)
+        # Unicorn's default translation cache can grow to 1 GiB. This daemon
+        # has a small working set even though its generated code changes often.
+        self.uc.ctl_set_tcg_buffer_size(16 * 1024 * 1024)
 
         self._handlers: dict[str, Callable[[Harness], int | None]] = {}
         self._stub_addr: dict[str, int] = {}
         self._stub_by_index: dict[int, str] = {}
         self._data_addr: dict[str, int] = {}
         self._heap_cur = HEAP_ADDRESS
+        self._heap_free = [(HEAP_ADDRESS, HEAP_SIZE)]
+        self._heap_allocations: dict[int, int] = {}
         self._scratch_cur = SCRATCH_ADDRESS
         self._obj_cur = OBJECT_ADDRESS
 
@@ -206,10 +211,14 @@ class Harness:
     def read_cstr(self, addr: int, max_len: int = 0x1000) -> str:
         out = bytearray()
         while len(out) < max_len:
-            b = self.mem_read(addr + len(out), 1)
-            if b == b"\x00":
+            current = addr + len(out)
+            size = min(64, max_len - len(out), PAGE - current % PAGE)
+            chunk = self.mem_read(current, size)
+            end = chunk.find(b"\x00")
+            if end >= 0:
+                out += chunk[:end]
                 break
-            out += b
+            out += chunk
         return out.decode("utf-8", "replace")
 
     def scratch(self, size: int) -> int:
@@ -217,6 +226,43 @@ class Harness:
         addr = self._scratch_cur
         self._scratch_cur += size
         return addr
+
+    def heap_alloc(self, size: int, alignment: int = 0x10) -> int:
+        """Allocate within the mapped heap, reusing released ranges."""
+        if size < 0 or alignment <= 0 or alignment & (alignment - 1):
+            raise ValueError("invalid heap allocation size or alignment")
+        size = (max(size, 0x20) + alignment - 1) & ~(alignment - 1)
+        for i, (start, length) in enumerate(self._heap_free):
+            addr = (start + alignment - 1) & ~(alignment - 1)
+            end = addr + size
+            if end > start + length:
+                continue
+            remaining = []
+            if addr > start:
+                remaining.append((start, addr - start))
+            if end < start + length:
+                remaining.append((end, start + length - end))
+            self._heap_free[i:i + 1] = remaining
+            self._heap_allocations[addr] = size
+            self._heap_cur = max(self._heap_cur, end)
+            return addr
+        raise EmulationError(f"emulated heap exhausted allocating {size:#x} bytes")
+
+    def heap_free(self, addr: int) -> None:
+        if not addr:
+            return
+        size = self._heap_allocations.pop(addr, None)
+        if size is None:
+            raise EmulationError(f"invalid emulated heap release at {addr:#x}")
+        ranges = sorted([*self._heap_free, (addr, size)])
+        merged: list[tuple[int, int]] = []
+        for start, length in ranges:
+            if merged and merged[-1][0] + merged[-1][1] == start:
+                prev, prev_length = merged[-1]
+                merged[-1] = (prev, prev_length + length)
+            else:
+                merged.append((start, length))
+        self._heap_free = merged
 
     def object(self, size: int) -> int:
         size = (size + 0xF) & ~0xF
@@ -268,11 +314,10 @@ class Harness:
 
     def _malloc(self, h: Harness) -> int:
         size = h.uc.reg_read(UC_X86_REG_RDI)
-        addr = h._heap_cur
-        h._heap_cur = (h._heap_cur + max(size, 0x20) + 0xF) & ~0xF
-        return addr
+        return h.heap_alloc(size)
 
     def _free(self, h: Harness) -> int:
+        h.heap_free(h.uc.reg_read(UC_X86_REG_RDI))
         return 0
 
 

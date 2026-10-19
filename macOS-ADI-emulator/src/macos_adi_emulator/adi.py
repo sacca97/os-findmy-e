@@ -179,9 +179,14 @@ class Adid:
 
         def mmap(hh: Harness) -> int:
             length = (_arg(hh, 1) + 0xFFF) & ~0xFFF
-            addr = (hh._heap_cur + 0xFFF) & ~0xFFF
-            hh._heap_cur = addr + length
+            addr = hh.heap_alloc(length, alignment=0x1000)
+            # Anonymous mappings must be zero-filled, including reused memory.
+            hh.mem_write(addr, bytes(length))
             return addr
+
+        def munmap(hh: Harness) -> int:
+            hh.heap_free(_arg(hh, 0))
+            return 0
 
         def sysctlbyname(hh: Harness) -> int:
             # The daemon checks kern.hv_vmm_present and bails in a VM; answer 0.
@@ -285,7 +290,7 @@ class Adid:
             "pthread_set_qos_class_self_np": lambda hh: 0,
             "sysconf": lambda hh: 4096,
             "mmap": mmap,
-            "munmap": lambda hh: 0,
+            "munmap": munmap,
             "ptrace": lambda hh: 0,
             "sched_yield": lambda hh: 0,
             "getpid": lambda hh: 4242,
@@ -374,16 +379,26 @@ class Adid:
         header = encode_u32(CLEAR) + encode_u32(MAGIC[name]) + encode_u32(PROTOCOL_MARKER)
         payload = header + b"".join(args)
 
-        self._state["reply"] = None
-        message = self._h.object(0x40)
-        self._objects[message] = dict(kind="dict", data={"data": payload})
-        self._invoke_block(self._state["peer_block"], message)
-        reply = self._state["reply"]
-        if not reply or "data" not in reply:
-            raise AdidError(-45017)  # no reply == the daemon rejected the message
-        data = reply["data"]
-        status = struct.unpack(">i", data[:4])[0]
-        return status, data[4:]
+        # XPC/CF wrapper objects and input buffers belong to this synchronous
+        # request. Keep the boot objects and daemon heap (including sessions).
+        h = self._h
+        scratch, objects, url = h._scratch_cur, h._obj_cur, self.stubs._next_url
+        saved_objects, saved_urls = self._objects.copy(), self.stubs.urls.copy()
+        try:
+            self._state["reply"] = None
+            message = h.object(0x40)
+            self._objects[message] = dict(kind="dict", data={"data": payload})
+            self._invoke_block(self._state["peer_block"], message)
+            reply = self._state["reply"]
+            if not reply or "data" not in reply:
+                raise AdidError(-45017)  # no reply == the daemon rejected the message
+            data = reply["data"]
+            status = struct.unpack(">i", data[:4])[0]
+            return status, data[4:]
+        finally:
+            h._scratch_cur, h._obj_cur, self.stubs._next_url = scratch, objects, url
+            self._objects, self.stubs.urls = saved_objects, saved_urls
+            self._state["reply"] = None
 
     def must(self, name: str, *args: bytes) -> bytes:
         status, payload = self.call(name, *args)

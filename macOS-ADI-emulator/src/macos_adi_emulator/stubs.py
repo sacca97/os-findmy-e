@@ -48,7 +48,8 @@ class MacStubs:
         self.next_fd = 3
         self.urls: dict[int, str] = {}
         self._next_url = 0x60080000
-        self._errno_addr: int | None = None
+        # errno outlives individual requests and their scratch buffers.
+        self._errno_addr = harness.scratch(8)
         self.home = "/Users/aditest"
         self.hostuuid = bytes.fromhex("00112233445566778899aabbccddeeff")
         # Imported CoreFoundation constants are represented by object pointers.
@@ -68,17 +69,12 @@ class MacStubs:
         except Exception:  # noqa: BLE001
             return ""
 
-    def _errno(self) -> int:
-        if self._errno_addr is None:
-            self._errno_addr = self.h.scratch(8)
-        return self._errno_addr
-
     def set_errno(self, value: int) -> None:
-        self.h.write_u32(self._errno(), value)
+        self.h.write_u32(self._errno_addr, value)
 
     def errno_ptr(self, h: "Harness") -> int:
         """`___error()` -- the address the caller dereferences to read errno."""
-        return self._errno()
+        return self._errno_addr
 
     def _fail(self, err: int) -> int:
         self.set_errno(err)
