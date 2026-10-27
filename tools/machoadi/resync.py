@@ -19,8 +19,8 @@ later rounds could be refused for that reason and not for the lease). If the ans
 synchronises, posts, and asks `init` again. At most 3 requests per round.
 
 Safety rails, all on by default:
-  * the shared cooldown (`cooldown.py`): refuses to start within 45 min of any recorded 429;
-  * the first 429 stops the run and records the time -- nothing is retried;
+  * nothing is retried: a 429 is reported as the answer of that request (it is an inconsistent
+    connection/request state, not a rate limit; see GSA-LOGIN-TRANSPORT.md);
   * `--max-requests` (default 40) caps the whole run.
 Every line carries `age_s`, the seconds since the machine was *provisioned* (not the store's mtime).
 """
@@ -39,8 +39,6 @@ from typing import Callable
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-import cooldown  # noqa: E402
-from cooldown import Throttled  # noqa: E402
 from findmy import AsyncAppleAccount  # noqa: E402
 from gsa import GSA, Device, GSAError  # noqa: E402
 from gsa_init import CLIENT_IDENTITY, CLIENT_SERIAL, CONTEXT, StaticAnisetteProvider  # noqa: E402
@@ -104,7 +102,6 @@ class Resyncer:
         self._log({"stage": stage, "age_s": self.age(), "at": time.strftime("%H:%M:%S"), **fields})
 
     def _spend(self, n: int = 1) -> None:
-        cooldown.guard()
         if self.requests + n > self.max_requests:
             raise SystemExit(f"--max-requests {self.max_requests} reached; stopping (nothing more sent)")
         self.requests += n
@@ -137,9 +134,6 @@ class Resyncer:
             status = response.get("Status") or {}
             verdict = {"ec": status.get("ec"), "hsc": status.get("hsc")}
         except Exception as error:  # noqa: BLE001 - a transport failure is a result, unless it is a 429
-            if cooldown.looks_like_429(error):
-                cooldown.note_429()
-                raise Throttled(str(error)) from error
             verdict = {"error": f"{type(error).__name__}: {error}"[:200]}
         finally:
             await account.close()
@@ -165,8 +159,6 @@ class Resyncer:
         try:
             reply = self.gsa.sync_machine(base64.b64encode(mid).decode(), base64.b64encode(srm).decode(), routing)
         except GSAError as error:
-            if cooldown.looks_like_429(error):
-                raise Throttled(str(error)) from error
             return {"error": str(error)[:200]}
         status = reply.get("Status") or {}
         new_rinfo = reply.get("X-Apple-I-MD-RINFO")
@@ -236,8 +228,7 @@ def main() -> int:
     parser.add_argument("--rounds", type=int, default=1)
     parser.add_argument("--delay", type=float, default=45.0, help="seconds between rounds (default 45)")
     parser.add_argument("--max-requests", type=int, default=40)
-    parser.add_argument("--dry-run", action="store_true", help="print the plan and the cooldown state; send nothing")
-    parser.add_argument("--ignore-cooldown", action="store_true", help="do not refuse during a recorded cooldown")
+    parser.add_argument("--dry-run", action="store_true", help="print the plan; send nothing")
     args = parser.parse_args()
 
     if not (args.state / "identity.json").exists():
@@ -247,19 +238,10 @@ def main() -> int:
     print(f"state {args.state}: provisioned {time.time() - born:.0f} s ago; "
           f"{args.rounds} rounds, {args.delay:.0f} s apart, at most {worst} requests "
           f"(~{worst / max(1.0, args.rounds * args.delay / 60):.1f}/min), cap {args.max_requests}", flush=True)
-    left = cooldown.remaining()
-    print(f"cooldown: {'none' if left <= 0 else f'{left / 60:.0f} min left'}", flush=True)
     if args.dry_run:
         print("dry run: nothing sent")
         return 0
-    cooldown.guard(args.ignore_cooldown)
-    try:
-        return asyncio.run(hold(args))
-    except Throttled as error:
-        print(json.dumps({"stage": "STOP", "reason": "HTTP 429", "detail": str(error)[:200]}), flush=True)
-        print(f"429: stopped at once and recorded it; do not touch Apple for {cooldown.COOLDOWN_MINUTES} min",
-              file=sys.stderr)
-        return 3
+    return asyncio.run(hold(args))
 
 
 if __name__ == "__main__":

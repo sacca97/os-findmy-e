@@ -29,7 +29,6 @@ import urllib.request
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
-from cooldown import note_429
 
 LOOKUP_URL = "https://gsa.apple.com/grandslam/GsService2/lookup"
 
@@ -54,7 +53,8 @@ def _apple_status(exc: urllib.error.HTTPError) -> str:
         return ""
 
 
-# 429 is the one status seen that is a plain rate limit. 433 is NOT one, though it was first read as
+# 429 on gsa.apple.com is an inconsistent connection/request state (GSA-LOGIN-TRANSPORT.md), not a rate
+# limit. 433 is NOT a rate limit either, though it was first read as
 # such (2026-10-15): finishMachineProvisioning answers 433 / ec -29002 for a device id that has
 # already been provisioned, from any source and at any time, while a fresh id succeeds seconds
 # later from the same IP. It is a verdict on the device id, so it falls through to the generic
@@ -121,11 +121,9 @@ class GSA:
                 return resp.read()
         except urllib.error.HTTPError as exc:
             if exc.code in THROTTLE_CODES:
-                note_429()
                 raise GSAError(
-                    f"HTTP {exc.code} from {url}: Apple is throttling this source. This is a rate "
-                    f"limit, not a verdict -- the identical request succeeds after a cooldown, so "
-                    f"read nothing into it."
+                    f"HTTP {exc.code} from {url}: usually an inconsistent request or connection state "
+                    f"(see GSA-LOGIN-TRANSPORT.md), not a rate limit."
                 ) from exc
             raise GSAError(f"{exc.code} {exc.reason} from {url}{_apple_status(exc)}") from exc
         except urllib.error.URLError as exc:

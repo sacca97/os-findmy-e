@@ -9,29 +9,11 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
-sys.path.insert(0, str(Path(__file__).resolve().parent / "tools" / "machoadi"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "machoadi"))
 
 import auth_probe  # noqa: E402
-import cooldown  # noqa: E402
 import mac_anisette  # noqa: E402
 import resync  # noqa: E402
-
-
-class CooldownTest(unittest.TestCase):
-    def test_guard_refuses_inside_the_cooldown_and_passes_after_it(self):
-        with tempfile.TemporaryDirectory() as d, patch.object(cooldown, "MARKER", Path(d) / "m"):
-            cooldown.guard()  # no marker: passes
-            cooldown.note_429(time.time() - 60)
-            with self.assertRaises(SystemExit) as ctx:
-                cooldown.guard()
-            self.assertIn("Nothing was sent", str(ctx.exception))
-            cooldown.guard(ignore=True)
-            cooldown.note_429(time.time() - (cooldown.COOLDOWN_MINUTES + 1) * 60)
-            cooldown.guard()
-
-    def test_429_detection(self):
-        self.assertTrue(cooldown.looks_like_429("The Grand Slam request was refused with HTTP 429."))
-        self.assertFalse(cooldown.looks_like_429("refused with HTTP 401"))
 
 
 class ProvisionedAtTest(unittest.TestCase):
@@ -105,7 +87,7 @@ class EnsureFreshTest(unittest.TestCase):
     def test_request_cap_stops_the_run(self):
         r = make_resyncer([])
         r.requests, r.max_requests = 40, 40
-        with patch.object(cooldown, "guard"), self.assertRaises(SystemExit):
+        with self.assertRaises(SystemExit):
             r._spend()
 
 

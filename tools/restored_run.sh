@@ -10,6 +10,5 @@ cd "$(dirname "$0")/.."
 state="${1:?usage: tools/restored_run.sh STATE [--tags ...]}"; shift
 login="$state-login.json"
 [ -f "$login" ] || { echo "no $login: log in once with tools/aged_login.sh $state" >&2; exit 1; }
-.venv/bin/python tools/machoadi/cooldown.py
-.venv/bin/python auth_probe.py --macadi "$state" --state-dir "$state-auth" --auto-resync \
+.venv/bin/python tools/machoadi/auth_probe.py --macadi "$state" --state-dir "$state-auth" --auto-resync \
   --restore-login "$login" "$@"

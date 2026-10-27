@@ -17,7 +17,6 @@ cd "$(dirname "$0")/.."
 
 state="${1:?usage: tools/aged_login.sh STATE [--2fa device|sms]}"; shift
 [ -f "$state/identity.json" ] || { echo "$state is not a provisioned machine" >&2; exit 2; }
-.venv/bin/python tools/machoadi/cooldown.py
 tfa=device; show=0; extra=(); save=1
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -41,5 +40,5 @@ if [ -n "${ADI_FROZEN_TIME:-}" ]; then echo "clock: FROZEN (old behaviour)"; els
 
 rm -rf "$state-auth"
 APPLE_ID="$APPLE_ID" APPLE_PASSWORD="$APPLE_PASSWORD" \
-  .venv/bin/python auth_probe.py --macadi "$state" --state-dir "$state-auth" --auto-resync \
+  .venv/bin/python tools/machoadi/auth_probe.py --macadi "$state" --state-dir "$state-auth" --auto-resync \
   ${tfa_args[@]+"${tfa_args[@]}"} --save-session "$state-session.json" ${extra[@]+"${extra[@]}"}

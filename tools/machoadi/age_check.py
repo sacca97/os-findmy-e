@@ -17,8 +17,7 @@ Reading it: `-20970 / 200` = accepted, `-22421 / 434` = refused (lease over).
   real clock: -22421 from ~60-75 s on ......... the clock is not the cause (the frozen timelines of
                                                  EVIDENCE.md section 1 are reproduced); go on to the resync hold test
 It never answers a 434 (no Synchronize, no syncMachine), so the age is pure.
-Requests: 3 for provisioning, 1 URL bag, 1 per age. Refuses to run during a recorded 429 cooldown and
-stops at the first 429.
+Requests: 3 for provisioning, 1 URL bag, 1 per age. Stops at the first 429.
 """
 
 from __future__ import annotations
@@ -43,14 +42,11 @@ def main() -> int:
                     help="probe an already provisioned state at these ages (seconds since ITS provisioning) "
                     "instead of provisioning; ages already past are sent at once, so pass future ones")
     ap.add_argument("--dry-run", action="store_true")
-    ap.add_argument("--ignore-cooldown", action="store_true")
     args = ap.parse_args()
     ages = [int(x) for x in args.ages.split(",")]
 
-    import cooldown  # noqa: PLC0415
-
     print(f"plan: {'probe existing' if args.existing else 'provision'} {args.state} with the {args.clock} clock, "
-          f"init at ages {ages} s; {(1 if args.existing else 4) + len(ages)} requests; cooldown {cooldown.remaining() / 60:.0f} min left", flush=True)
+          f"init at ages {ages} s; {(1 if args.existing else 4) + len(ages)} requests", flush=True)
     if args.dry_run:
         print("dry run: nothing sent")
         return 0
@@ -58,7 +54,6 @@ def main() -> int:
         raise SystemExit(f"{args.state} is not a provisioned state")
     if not args.existing and args.state.exists():
         raise SystemExit(f"{args.state} exists: a state is provisioned once (HTTP 433), use a new directory")
-    cooldown.guard(args.ignore_cooldown)
     if args.clock == "real":
         os.environ.pop("ADI_FROZEN_TIME", None)
     else:
@@ -67,21 +62,17 @@ def main() -> int:
     from mac_anisette import MacAnisette  # noqa: PLC0415
     from resync import Resyncer  # noqa: PLC0415
 
-    try:
-        if not args.existing:
-            MacAnisette(args.state).provision()
-        resyncer = Resyncer(args.state, max_requests=4 + len(ages))
-        if args.existing:
-            print(f"machine age now {resyncer.age()} s", flush=True)
-        for age in ages:
-            time.sleep(max(0.0, resyncer.born + age - time.time()))
-            verdict = asyncio.run(resyncer.probe())
-            print(json.dumps({"clock": args.clock, "age_s": resyncer.age(), "at": time.strftime("%H:%M:%S"),
-                              "ec": verdict.get("ec"), "hsc": verdict.get("hsc"),
-                              "sim": bool(verdict.get("sim_b64")), "error": verdict.get("error")}), flush=True)
-    except cooldown.Throttled as error:
-        print(json.dumps({"stage": "STOP", "reason": "HTTP 429", "detail": str(error)[:200]}), flush=True)
-        return 3
+    if not args.existing:
+        MacAnisette(args.state).provision()
+    resyncer = Resyncer(args.state, max_requests=4 + len(ages))
+    if args.existing:
+        print(f"machine age now {resyncer.age()} s", flush=True)
+    for age in ages:
+        time.sleep(max(0.0, resyncer.born + age - time.time()))
+        verdict = asyncio.run(resyncer.probe())
+        print(json.dumps({"clock": args.clock, "age_s": resyncer.age(), "at": time.strftime("%H:%M:%S"),
+                          "ec": verdict.get("ec"), "hsc": verdict.get("hsc"),
+                          "sim": bool(verdict.get("sim_b64")), "error": verdict.get("error")}), flush=True)
     return 0
 
 

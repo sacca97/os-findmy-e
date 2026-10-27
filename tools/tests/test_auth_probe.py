@@ -1,6 +1,7 @@
 import asyncio
 import io
 import json
+import sys
 import tempfile
 import unittest
 from contextlib import redirect_stdout
@@ -8,7 +9,9 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
-import auth_probe
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "machoadi"))
+
+import auth_probe  # noqa: E402
 from findmy import LoginState
 from findmy.errors import InvalidCredentialsError
 

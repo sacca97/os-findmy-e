@@ -10,6 +10,5 @@ cd "$(dirname "$0")/.."
 state="${1:?usage: tools/replay_aged.sh STATE [COUNT] [INTERVAL] [KEEPALIVE]}"
 session="$state-session.json"
 [ -f "$session" ] || { echo "no $session: run tools/aged_login.sh $state first" >&2; exit 1; }
-.venv/bin/python tools/machoadi/cooldown.py
 .venv/bin/python tools/machoadi/replay.py --state "$state" --session "$session" \
   --count "${2:-12}" --interval "${3:-30}" --keepalive "${4:-45}" --dump-refusal

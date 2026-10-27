@@ -37,7 +37,6 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "tools" / "machoadi"))
 
-import cooldown  # noqa: E402
 from auth_probe import FETCH_BODIES, make_mac_account  # noqa: E402
 from mac_anisette import provisioned_at  # noqa: E402
 from resync import Resyncer, sim_from_response  # noqa: E402
@@ -62,9 +61,7 @@ async def main() -> int:
                     help="answer Apple's resync before the first fetch and every S seconds (0 = never)")
     ap.add_argument("--dump-refusal", action="store_true", help="show headers/body of every non-200 answer")
     ap.add_argument("--max-requests", type=int, default=60, help="cap on resync requests (default 60)")
-    ap.add_argument("--ignore-cooldown", action="store_true")
     args = ap.parse_args()
-    cooldown.guard(args.ignore_cooldown)
 
     session = json.loads(args.session.read_text())
     account = make_mac_account(args.state)

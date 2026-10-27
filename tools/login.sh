@@ -50,6 +50,6 @@ mkdir -p /tmp/macadi
 
 .venv/bin/python tools/machoadi/mac_anisette.py provision --state "$state"
 APPLE_ID="$APPLE_ID" APPLE_PASSWORD="$APPLE_PASSWORD" \
-  .venv/bin/python auth_probe.py --macadi "$state" --state-dir "$state-auth" \
+  .venv/bin/python tools/machoadi/auth_probe.py --macadi "$state" --state-dir "$state-auth" \
   ${tfa_args[@]+"${tfa_args[@]}"} \
   --save-session "/tmp/macadi/session-$name.json" ${extra[@]+"${extra[@]}"}

@@ -60,7 +60,7 @@ def make_mac_account(state):
     to be that same installation and not a second device beside it: `uid`/`devid` are read
     from the same identity.json the headers are built from.
     """
-    sys.path.insert(0, str(Path(__file__).resolve().parent / "tools" / "machoadi"))
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
     from provider import MacAnisetteProvider
     provider = MacAnisetteProvider(state)
     identity = provider.identity_json
@@ -102,7 +102,7 @@ def describe_delegates(response):
 
 def machine_born(state):
     """Unix time the machine was provisioned (identity.json). Not the store's mtime: every OTP rewrites it."""
-    sys.path.insert(0, str(Path(__file__).resolve().parent / "tools" / "machoadi"))
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
     from mac_anisette import provisioned_at
     return provisioned_at(state)
 
@@ -214,7 +214,7 @@ async def watch_token(account, state, token, seconds, interval=10, other_after=4
     import subprocess
     import time
     url = "https://gateway.icloud.com/acsnservice/fetch"
-    cli = Path(__file__).resolve().parent / "tools" / "machoadi" / "mac_anisette.py"
+    cli = Path(__file__).resolve().parent / "mac_anisette.py"
 
     def born_of(directory):
         return machine_born(directory)
@@ -399,7 +399,7 @@ async def authenticate(account, directory, client_info=None, sms=None, save_sess
                 await watch_token(account, machine_state, tokens["searchPartyToken"], watch, watch_interval,
                                   watch_other_after)
             if save_login:
-                sys.path.insert(0, str(Path(__file__).resolve().parent / "tools" / "machoadi"))
+                sys.path.insert(0, str(Path(__file__).resolve().parent))
                 import login_store
                 login_store.save(account, save_login, keep_password=keep_password)
                 print(f"[login] saved (0600, {'with' if keep_password else 'WITHOUT'} the password): {save_login}"
@@ -464,7 +464,6 @@ def main():
                         help="with --auto-resync: also check the machine with a credential-free init before the "
                         "login and before the 2FA submit (costs 1-3 Apple requests each; off by default now that "
                         "the real clock keeps the machine accepted -- a 434 during the login is still answered)")
-    parser.add_argument("--ignore-cooldown", action="store_true", help="skip the shared 429 cooldown guard")
     parser.add_argument("--save-login", metavar="FILE",
                         help="after a successful login, save the account state (service tokens and, unless "
                         "--no-save-password, the password) to FILE, mode 0600. It is a credential.")
@@ -516,9 +515,7 @@ def main():
     if args.auto_resync and not args.macadi:
         parser.error("--auto-resync needs --macadi")
     if args.macadi:
-        sys.path.insert(0, str(Path(__file__).resolve().parent / "tools" / "machoadi"))
-        import cooldown
-        cooldown.guard(args.ignore_cooldown)
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
     if args.macadi and args.anisette_url:
         parser.error("--macadi supplies its own Anisette: drop --anisette-url")
     if args.plain_z_timestamp:
@@ -587,12 +584,6 @@ def main():
         return 130
     except Exception as error:
         print(f"Authentication stopped: {type(error).__name__}: {error}")
-        if args.macadi:
-            import cooldown
-            if cooldown.looks_like_429(error):
-                cooldown.note_429()
-                print(f"[cooldown] 429 recorded: nothing in this repo will talk to Apple for "
-                      f"{cooldown.COOLDOWN_MINUTES} minutes", flush=True)
         return 1
 
 
