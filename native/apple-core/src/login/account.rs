@@ -851,8 +851,8 @@ impl AppleAccount {
     fn http_failure(&self, reply: &Reply, what: &str) -> Error {
         if reply.code == 429 {
             return Error::Throttled(
-                "Apple is rate-limiting this device (HTTP 429). This is a rate limit, not a verdict: \
-                 the identical request works after a cooldown."
+                "Apple answered HTTP 429: usually an inconsistent request or connection state \
+                 (for example a reused connection), not a rate limit; retrying is safe."
                     .into(),
             );
         }

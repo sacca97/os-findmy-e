@@ -49,7 +49,7 @@ pub enum Error {
     },
     /// Apple answered with its own `ec`/`em`, or an HTTP refusal.
     Rejected { http: Option<u16>, ec: Option<i64>, message: String },
-    /// HTTP 429: a rate limit, not a verdict.
+    /// HTTP 429: on Grand Slam, an inconsistent connection or request state (see GSA-LOGIN-TRANSPORT.md), not a rate limit.
     Throttled(String),
     /// A malformed or unexpected answer.
     Backend(String),

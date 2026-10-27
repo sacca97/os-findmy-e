@@ -89,6 +89,14 @@ impl Response {
     }
 }
 
+/// Hosts that answer 429 to a second request on a connection they already answered: `gsa.apple.com` (measured, init then
+/// complete) and the escrow proxy `p<partition>-escrowproxy.icloud.com`, whose passcode recovery is the same shape
+/// (`srp_init` then `recover` on one host). Requests to them get a fresh connection each and `Connection: close`.
+pub fn no_reuse_host(host: &str) -> bool {
+    let host = host.split(':').next().unwrap_or(host); // `host_of` keeps the port: "p25-escrowproxy.icloud.com:443"
+    host == "gsa.apple.com" || (host.ends_with("-escrowproxy.icloud.com") && host.starts_with('p'))
+}
+
 /// The default and unpooled clients. Construction is cheap enough to do once per facade.
 #[derive(Clone)]
 pub struct Http {
@@ -130,8 +138,7 @@ impl Http {
 
     /// A client suitable for `host`.
     pub fn for_host(&self, host: &str) -> &reqwest::Client {
-        // gsa.apple.com refuses a second request on an already-answered connection.
-        if host == "gsa.apple.com" {
+        if no_reuse_host(host) {
             &self.unpooled
         } else {
             &self.default
@@ -152,7 +159,7 @@ impl Http {
     ) -> Result<Response> {
         let host = host_of(url);
         let method = if body.is_some() { reqwest::Method::POST } else { reqwest::Method::GET };
-        let mut builder = self.provisioning.request(method, url);
+        let mut builder = self.provisioning.request(method, url).header(reqwest::header::CONNECTION, "close");
         for (k, v) in headers {
             builder = builder.header(k, v);
         }
@@ -192,6 +199,10 @@ impl Http {
         let host = host_of(url);
         let client = self.for_host(&host);
         let mut builder = client.request(method, url);
+        if no_reuse_host(&host) {
+            // As FindMy.py's `TCPConnector(force_close=True)`: the connection ends with this response.
+            builder = builder.header(reqwest::header::CONNECTION, "close");
+        }
         for (k, v) in headers {
             builder = builder.header(k, v);
         }
@@ -229,7 +240,88 @@ mod tests {
     use super::*;
 
     #[test]
+    fn gsa_and_the_escrow_proxy_get_no_connection_reuse() {
+        assert!(no_reuse_host("gsa.apple.com"));
+        assert!(no_reuse_host("p25-escrowproxy.icloud.com"));
+        assert!(no_reuse_host("p25-escrowproxy.icloud.com:443"));
+        assert!(!no_reuse_host("gateway.icloud.com"));
+        assert!(!no_reuse_host("setup.icloud.com"));
+        assert!(!no_reuse_host("evil-escrowproxy.icloud.com.example.org"));
+    }
+
+    #[test]
     fn the_bundled_root_matches_its_hash() {
         assert!(verified_apple_root_der().is_ok());
+    }
+
+    /// A loopback HTTP/1.1 server that, like `gsa.apple.com`'s edge, answers 429 to a second request on a connection it
+    /// already answered. Returns its URL and how many TCP connections it accepted.
+    async fn reuse_refusing_server() -> (String, std::sync::Arc<std::sync::atomic::AtomicUsize>) {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = format!("http://{}/x", listener.local_addr().unwrap());
+        let accepted = std::sync::Arc::new(AtomicUsize::new(0));
+        let count = accepted.clone();
+        tokio::spawn(async move {
+            loop {
+                let (mut sock, _) = listener.accept().await.unwrap();
+                count.fetch_add(1, Ordering::SeqCst);
+                tokio::spawn(async move {
+                    let mut served = 0;
+                    let mut buf = vec![0u8; 4096];
+                    loop {
+                        match sock.read(&mut buf).await {
+                            Ok(0) | Err(_) => return,
+                            Ok(_) => {}
+                        }
+                        let status = if served == 0 { "200 OK" } else { "429 Too Many Requests" };
+                        served += 1;
+                        let reply = format!("HTTP/1.1 {status}\r\nContent-Length: 2\r\n\r\nok");
+                        if sock.write_all(reply.as_bytes()).await.is_err() {
+                            return;
+                        }
+                    }
+                });
+            }
+        });
+        (url, accepted)
+    }
+
+    async fn two_requests(client: &reqwest::Client) -> (u16, u16) {
+        let (url, accepted) = reuse_refusing_server().await;
+        let a = client.post(&url).body("init").send().await.unwrap().status().as_u16();
+        let b = client.post(&url).body("complete").send().await.unwrap().status().as_u16();
+        let _ = accepted;
+        (a, b)
+    }
+
+    /// Through `Http::send`/`provisioning_send` themselves (not just the client): two requests, two connections.
+    #[tokio::test]
+    async fn send_opens_a_new_connection_per_request_for_gsa_paths() {
+        use std::sync::atomic::Ordering;
+        let http = Http::new(Duration::from_secs(5)).unwrap();
+        let (url, accepted) = reuse_refusing_server().await;
+        for body in ["init", "complete"] {
+            let r = http.provisioning_send(&url, vec![], Some(body.as_bytes().to_vec())).await.unwrap();
+            assert_eq!(r.status, 200, "provisioning_send {body}");
+        }
+        assert_eq!(accepted.load(Ordering::SeqCst), 2);
+    }
+
+    #[tokio::test]
+    async fn gsa_clients_never_reuse_a_connection() {
+        let http = Http::new(Duration::from_secs(5)).unwrap();
+        for _ in 0..5 {
+            assert_eq!(two_requests(http.for_host("gsa.apple.com")).await, (200, 200), "unpooled");
+            assert_eq!(two_requests(http.provisioning_client()).await, (200, 200), "provisioning");
+        }
+    }
+
+    /// Control: the pooled default client does reuse, so the server above really does reproduce the failure.
+    #[tokio::test]
+    async fn the_pooled_client_would_hit_the_429() {
+        let http = Http::new(Duration::from_secs(5)).unwrap();
+        assert_eq!(two_requests(http.default_client()).await, (200, 429));
     }
 }
