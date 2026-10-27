@@ -22,4 +22,4 @@ NDK=/path/to/android-ndk ./native/android/build.sh arm64-v8a
 
 The libraries are written to `native/android/jniLibs/`. The app's local build inputs are listed in [its README](../app/README.md). For manual Apple checks, see [LIVE-VALIDATION.md](LIVE-VALIDATION.md); network commands require `--yes`.
 
-The Rust emulator depends on `unicorn-engine` (GPL-2.0).
+The Rust emulator depends on `unicorn-engine` (GPL-2.0), and the workspace is licensed GPL-2.0-only.

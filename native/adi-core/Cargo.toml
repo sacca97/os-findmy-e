@@ -3,7 +3,7 @@ name = "adi-core"
 version = "0.1.0"
 edition = "2021"
 description = "Mac CoreADI under Unicorn: a small, dependency-light emulator core for Anisette (MID/OTP)"
-license = "MIT"
+license = "GPL-2.0-only"
 
 [lib]
 name = "adi_core"

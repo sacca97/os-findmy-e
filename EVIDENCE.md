@@ -66,7 +66,7 @@ The login in section 2 used a random device ID, host UUID and serial. No real Ma
 | New | `Mac16,12` (Apple silicon) | success |
 | One that just succeeded | Intel default | 433 |
 
-HTTP 429 is the real rate limit. It comes from the edge as an HTML page, and it appeared after many logins in one day.
+HTTP 429 from `gsa.apple.com` (a short HTML page from the edge) was first read as a rate limit. It is Apple refusing a second request on a reused connection, not a rate limit: see `GSA-LOGIN-TRANSPORT.md`. The same applies to the escrow proxy, whose `srp_init` and `recover` share one host.
 
 ## 5. Library builds
 
