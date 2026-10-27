@@ -1,0 +1,138 @@
+{
+ "not_der": {
+  "data": "3081",
+  "error": "ServiceKeyError",
+  "keys": null
+ },
+ "primitive": {
+  "data": "04200000000000000000000000000000000000000000000000000000000000000000",
+  "error": "ServiceKeyError",
+  "keys": null
+ },
+ "v1_blob_and_other": {
+  "data": "30680440a3e34c0579b1a3ea4ecdad363c0c98abcd0a47bd4a661cb0903a91f3a768ed90b94469e050fd5d060411127d3be73283439d7ef2cf63e09ae10a16ad9e9f50fc040201020420d7297bd791167b58d59daab10810fd4a2568f9d22b839e0e4a712aeeebd01be6",
+  "error": null,
+  "keys": [
+   {
+    "curve": "secp256r1",
+    "d": "b94469e050fd5d060411127d3be73283439d7ef2cf63e09ae10a16ad9e9f50fc"
+   },
+   {
+    "curve": "secp256r1",
+    "d": "d7297bd791167b58d59daab10810fd4a2568f9d22b839e0e4a712aeeebd01be6"
+   }
+  ]
+ },
+ "v1_nothing_usable": {
+  "data": "3007040573686f7274",
+  "error": "ServiceKeyError",
+  "keys": null
+ },
+ "v1_scalar": {
+  "data": "30220420d7297bd791167b58d59daab10810fd4a2568f9d22b839e0e4a712aeeebd01be6",
+  "error": null,
+  "keys": [
+   {
+    "curve": "secp256r1",
+    "d": "d7297bd791167b58d59daab10810fd4a2568f9d22b839e0e4a712aeeebd01be6"
+   }
+  ]
+ },
+ "v1_zero_scalar": {
+  "data": "302204200000000000000000000000000000000000000000000000000000000000000000",
+  "error": "ServiceKeyError",
+  "keys": null
+ },
+ "v2_empty": {
+  "data": "6500",
+  "error": "ServiceKeyError",
+  "keys": null
+ },
+ "v2_explicit_scalar": {
+  "data": "6528302604240a220a20b94469e050fd5d060411127d3be73283439d7ef2cf63e09ae10a16ad9e9f50fc",
+  "error": null,
+  "keys": [
+   {
+    "curve": "secp256r1",
+    "d": "b94469e050fd5d060411127d3be73283439d7ef2cf63e09ae10a16ad9e9f50fc"
+   }
+  ]
+ },
+ "v2_halves_disagree": {
+  "data": "654604440a420a40a3e34c0579b1a3ea4ecdad363c0c98abcd0a47bd4a661cb0903a91f3a768ed90d7297bd791167b58d59daab10810fd4a2568f9d22b839e0e4a712aeeebd01be6",
+  "error": "KeyBlobError",
+  "keys": null
+ },
+ "v2_implicit_scalar": {
+  "data": "652604240a220a20b94469e050fd5d060411127d3be73283439d7ef2cf63e09ae10a16ad9e9f50fc",
+  "error": null,
+  "keys": [
+   {
+    "curve": "secp256r1",
+    "d": "b94469e050fd5d060411127d3be73283439d7ef2cf63e09ae10a16ad9e9f50fc"
+   }
+  ]
+ },
+ "v2_no_octet": {
+  "data": "65053003020101",
+  "error": "ServiceKeyError",
+  "keys": null
+ },
+ "v2_not_protobuf": {
+  "data": "65050403ffffff",
+  "error": "ServiceKeyError",
+  "keys": null
+ },
+ "v2_p384_blob": {
+  "data": "656604640a620a606d67310f4bdeac935e466220cdf308586a1d38502e3f782e1447a9edbfcc8750beb4f7e8ff5fb04c9e4579d0b4d94b7de32f17f95e4cd0d86c3e66358928cf07d6e4857f39bdbe861553cee8b9062981a346eb2ea4eb7d18169abf96f76ba312",
+  "error": null,
+  "keys": [
+   {
+    "curve": "secp384r1",
+    "d": "e32f17f95e4cd0d86c3e66358928cf07d6e4857f39bdbe861553cee8b9062981a346eb2ea4eb7d18169abf96f76ba312"
+   }
+  ]
+ },
+ "v2_scalar_and_blob": {
+  "data": "656c306a04680a220a20b94469e050fd5d060411127d3be73283439d7ef2cf63e09ae10a16ad9e9f50fc12420a402824bdf291a24e5414e9088add6701233b5d649b1d84e4df827cacd990eac360d7297bd791167b58d59daab10810fd4a2568f9d22b839e0e4a712aeeebd01be6",
+  "error": null,
+  "keys": [
+   {
+    "curve": "secp256r1",
+    "d": "d7297bd791167b58d59daab10810fd4a2568f9d22b839e0e4a712aeeebd01be6"
+   },
+   {
+    "curve": "secp256r1",
+    "d": "b94469e050fd5d060411127d3be73283439d7ef2cf63e09ae10a16ad9e9f50fc"
+   }
+  ]
+ },
+ "v2_two_blobs_verified": {
+  "data": "65818b0481880a420a40a3e34c0579b1a3ea4ecdad363c0c98abcd0a47bd4a661cb0903a91f3a768ed90b94469e050fd5d060411127d3be73283439d7ef2cf63e09ae10a16ad9e9f50fc12420a402824bdf291a24e5414e9088add6701233b5d649b1d84e4df827cacd990eac360d7297bd791167b58d59daab10810fd4a2568f9d22b839e0e4a712aeeebd01be6",
+  "error": null,
+  "keys": [
+   {
+    "curve": "secp256r1",
+    "d": "b94469e050fd5d060411127d3be73283439d7ef2cf63e09ae10a16ad9e9f50fc"
+   },
+   {
+    "curve": "secp256r1",
+    "d": "d7297bd791167b58d59daab10810fd4a2568f9d22b839e0e4a712aeeebd01be6"
+   }
+  ]
+ },
+ "v2_unknown_field_numbers": {
+  "data": "656804662a402824bdf291a24e5414e9088add6701233b5d649b1d84e4df827cacd990eac360d7297bd791167b58d59daab10810fd4a2568f9d22b839e0e4a712aeeebd01be632220a20b94469e050fd5d060411127d3be73283439d7ef2cf63e09ae10a16ad9e9f50fc",
+  "error": null,
+  "keys": [
+   {
+    "curve": "secp256r1",
+    "d": "d7297bd791167b58d59daab10810fd4a2568f9d22b839e0e4a712aeeebd01be6"
+   },
+   {
+    "curve": "secp256r1",
+    "d": "b94469e050fd5d060411127d3be73283439d7ef2cf63e09ae10a16ad9e9f50fc"
+   }
+  ]
+ }
+}

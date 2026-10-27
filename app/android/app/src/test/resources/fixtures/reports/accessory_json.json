@@ -1,0 +1,478 @@
+{
+ "bad": [
+  {
+   "input": {
+    "alignment_date": "2026-10-02T03:04:05+00:00",
+    "alignment_index": 77,
+    "group_identifier": "G",
+    "identifier": "ID-1",
+    "model": "AirTag1,1",
+    "name": "Keys",
+    "paired_at": "2026-09-01T00:00:00+00:00",
+    "serial_number": "SER1",
+    "skn": "4c2fa7fd684f292626ebff69b23c88bffbe091dfb75494e8e22ed224799dfee5",
+    "sks": "9d3499d91d7c39bced3c87cda31e7a1e185c36d467ac56d51950fac450703f77",
+    "type": "accessory"
+   },
+   "name": "missing_master_key"
+  },
+  {
+   "input": {
+    "alignment_date": "2026-10-02T03:04:05+00:00",
+    "alignment_index": 77,
+    "group_identifier": "G",
+    "identifier": "ID-1",
+    "master_key": "1107570bbbff8c287d69bbfe43ba7c3a29befe473f6196c21a4ffa60",
+    "model": "AirTag1,1",
+    "name": "Keys",
+    "paired_at": "2026-09-01T00:00:00+00:00",
+    "serial_number": "SER1",
+    "sks": "9d3499d91d7c39bced3c87cda31e7a1e185c36d467ac56d51950fac450703f77",
+    "type": "accessory"
+   },
+   "name": "missing_skn"
+  },
+  {
+   "input": {
+    "alignment_date": "2026-10-02T03:04:05+00:00",
+    "alignment_index": 77,
+    "group_identifier": "G",
+    "identifier": "ID-1",
+    "master_key": "1107570bbbff8c287d69bbfe43ba7c3a29befe473f6196c21a4ffa60",
+    "model": "AirTag1,1",
+    "name": "Keys",
+    "paired_at": "2026-09-01T00:00:00+00:00",
+    "serial_number": "SER1",
+    "skn": "4c2fa7fd684f292626ebff69b23c88bffbe091dfb75494e8e22ed224799dfee5",
+    "type": "accessory"
+   },
+   "name": "missing_sks"
+  },
+  {
+   "input": {
+    "alignment_date": "2026-10-02T03:04:05+00:00",
+    "alignment_index": 77,
+    "group_identifier": "G",
+    "identifier": "ID-1",
+    "master_key": "1107570bbbff8c287d69bbfe43ba7c3a29befe473f6196c21a4ffa60",
+    "model": "AirTag1,1",
+    "name": "Keys",
+    "serial_number": "SER1",
+    "skn": "4c2fa7fd684f292626ebff69b23c88bffbe091dfb75494e8e22ed224799dfee5",
+    "sks": "9d3499d91d7c39bced3c87cda31e7a1e185c36d467ac56d51950fac450703f77",
+    "type": "accessory"
+   },
+   "name": "missing_paired_at"
+  },
+  {
+   "input": {
+    "alignment_date": "2026-10-02T03:04:05+00:00",
+    "alignment_index": 77,
+    "group_identifier": "G",
+    "identifier": "ID-1",
+    "master_key": "1107570bbbff8c287d69bbfe43ba7c3a29befe473f6196c21a4ffa60",
+    "model": "AirTag1,1",
+    "paired_at": "2026-09-01T00:00:00+00:00",
+    "serial_number": "SER1",
+    "skn": "4c2fa7fd684f292626ebff69b23c88bffbe091dfb75494e8e22ed224799dfee5",
+    "sks": "9d3499d91d7c39bced3c87cda31e7a1e185c36d467ac56d51950fac450703f77",
+    "type": "accessory"
+   },
+   "name": "missing_name"
+  },
+  {
+   "input": {
+    "alignment_date": "2026-10-02T03:04:05+00:00",
+    "alignment_index": 77,
+    "group_identifier": "G",
+    "identifier": "ID-1",
+    "master_key": "1107570bbbff8c287d69bbfe43ba7c3a29befe473f6196c21a4ffa60",
+    "name": "Keys",
+    "paired_at": "2026-09-01T00:00:00+00:00",
+    "serial_number": "SER1",
+    "skn": "4c2fa7fd684f292626ebff69b23c88bffbe091dfb75494e8e22ed224799dfee5",
+    "sks": "9d3499d91d7c39bced3c87cda31e7a1e185c36d467ac56d51950fac450703f77",
+    "type": "accessory"
+   },
+   "name": "missing_model"
+  },
+  {
+   "input": {
+    "alignment_date": "2026-10-02T03:04:05+00:00",
+    "alignment_index": 77,
+    "group_identifier": "G",
+    "master_key": "1107570bbbff8c287d69bbfe43ba7c3a29befe473f6196c21a4ffa60",
+    "model": "AirTag1,1",
+    "name": "Keys",
+    "paired_at": "2026-09-01T00:00:00+00:00",
+    "serial_number": "SER1",
+    "skn": "4c2fa7fd684f292626ebff69b23c88bffbe091dfb75494e8e22ed224799dfee5",
+    "sks": "9d3499d91d7c39bced3c87cda31e7a1e185c36d467ac56d51950fac450703f77",
+    "type": "accessory"
+   },
+   "name": "missing_identifier"
+  },
+  {
+   "input": {
+    "alignment_index": 77,
+    "group_identifier": "G",
+    "identifier": "ID-1",
+    "master_key": "1107570bbbff8c287d69bbfe43ba7c3a29befe473f6196c21a4ffa60",
+    "model": "AirTag1,1",
+    "name": "Keys",
+    "paired_at": "2026-09-01T00:00:00+00:00",
+    "serial_number": "SER1",
+    "skn": "4c2fa7fd684f292626ebff69b23c88bffbe091dfb75494e8e22ed224799dfee5",
+    "sks": "9d3499d91d7c39bced3c87cda31e7a1e185c36d467ac56d51950fac450703f77",
+    "type": "accessory"
+   },
+   "name": "missing_alignment_date"
+  },
+  {
+   "input": {
+    "alignment_date": "2026-10-02T03:04:05+00:00",
+    "group_identifier": "G",
+    "identifier": "ID-1",
+    "master_key": "1107570bbbff8c287d69bbfe43ba7c3a29befe473f6196c21a4ffa60",
+    "model": "AirTag1,1",
+    "name": "Keys",
+    "paired_at": "2026-09-01T00:00:00+00:00",
+    "serial_number": "SER1",
+    "skn": "4c2fa7fd684f292626ebff69b23c88bffbe091dfb75494e8e22ed224799dfee5",
+    "sks": "9d3499d91d7c39bced3c87cda31e7a1e185c36d467ac56d51950fac450703f77",
+    "type": "accessory"
+   },
+   "name": "missing_alignment_index"
+  },
+  {
+   "input": {
+    "alignment_date": "2026-10-02T03:04:05+00:00",
+    "alignment_index": 77,
+    "group_identifier": "G",
+    "identifier": "ID-1",
+    "master_key": "1107570bbbff8c287d69bbfe43ba7c3a29befe473f6196c21a4ffa",
+    "model": "AirTag1,1",
+    "name": "Keys",
+    "paired_at": "2026-09-01T00:00:00+00:00",
+    "serial_number": "SER1",
+    "skn": "4c2fa7fd684f292626ebff69b23c88bffbe091dfb75494e8e22ed224799dfee5",
+    "sks": "9d3499d91d7c39bced3c87cda31e7a1e185c36d467ac56d51950fac450703f77",
+    "type": "accessory"
+   },
+   "name": "master_short"
+  },
+  {
+   "input": {
+    "alignment_date": "2026-10-02T03:04:05+00:00",
+    "alignment_index": 77,
+    "group_identifier": "G",
+    "identifier": "ID-1",
+    "master_key": "1107570bbbff8c287d69bbfe43ba7c3a29befe473f6196c21a4ffa60",
+    "model": "AirTag1,1",
+    "name": "Keys",
+    "paired_at": "2026-09-01T00:00:00+00:00",
+    "serial_number": "SER1",
+    "skn": "4c2fa7fd684f292626ebff69b23c88bffbe091dfb75494e8e22ed224799dfe",
+    "sks": "9d3499d91d7c39bced3c87cda31e7a1e185c36d467ac56d51950fac450703f77",
+    "type": "accessory"
+   },
+   "name": "skn_short"
+  },
+  {
+   "input": {
+    "alignment_date": "2026-10-02T03:04:05+00:00",
+    "alignment_index": 77,
+    "group_identifier": "G",
+    "identifier": "ID-1",
+    "master_key": "1107570bbbff8c287d69bbfe43ba7c3a29befe473f6196c21a4ffa60",
+    "model": "AirTag1,1",
+    "name": "Keys",
+    "paired_at": "2026-09-01T00:00:00+00:00",
+    "serial_number": "SER1",
+    "skn": "4c2fa7fd684f292626ebff69b23c88bffbe091dfb75494e8e22ed224799dfee5",
+    "sks": "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+    "type": "accessory"
+   },
+   "name": "bad_hex"
+  },
+  {
+   "input": {
+    "alignment_date": "2026-10-02T03:04:05+00:00",
+    "alignment_index": 77,
+    "group_identifier": "G",
+    "identifier": "ID-1",
+    "master_key": "1107570bbbff8c287d69bbfe43ba7c3a29befe473f6196c21a4ffa60",
+    "model": "AirTag1,1",
+    "name": "Keys",
+    "paired_at": "2026-09-01T00:00:00+00:00",
+    "serial_number": "SER1",
+    "skn": "4c2fa7fd684f292626ebff69b23c88bffbe091dfb75494e8e22ed224799dfee5",
+    "sks": "9d3499d91d7c39bced3c87cda31e7a1e185c36d467ac56d51950fac450703f77",
+    "type": "keypair"
+   },
+   "name": "wrong_type"
+  },
+  {
+   "input": {
+    "alignment_date": "2026-10-02T03:04:05+00:00",
+    "alignment_index": 77,
+    "group_identifier": "G",
+    "identifier": "ID-1",
+    "master_key": "1107570bbbff8c287d69bbfe43ba7c3a29befe473f6196c21a4ffa60",
+    "model": "AirTag1,1",
+    "name": "Keys",
+    "paired_at": "yesterday",
+    "serial_number": "SER1",
+    "skn": "4c2fa7fd684f292626ebff69b23c88bffbe091dfb75494e8e22ed224799dfee5",
+    "sks": "9d3499d91d7c39bced3c87cda31e7a1e185c36d467ac56d51950fac450703f77",
+    "type": "accessory"
+   },
+   "name": "bad_date"
+  }
+ ],
+ "cases": [
+  {
+   "input": {
+    "alignment_date": "2026-10-02T03:04:05+00:00",
+    "alignment_index": 77,
+    "group_identifier": "G",
+    "identifier": "ID-1",
+    "master_key": "1107570bbbff8c287d69bbfe43ba7c3a29befe473f6196c21a4ffa60",
+    "model": "AirTag1,1",
+    "name": "Keys",
+    "paired_at": "2026-09-01T00:00:00+00:00",
+    "serial_number": "SER1",
+    "skn": "4c2fa7fd684f292626ebff69b23c88bffbe091dfb75494e8e22ed224799dfee5",
+    "sks": "9d3499d91d7c39bced3c87cda31e7a1e185c36d467ac56d51950fac450703f77",
+    "type": "accessory"
+   },
+   "name": "utc",
+   "python_roundtrip": {
+    "alignment_date": "2026-10-02T03:04:05+00:00",
+    "alignment_index": 77,
+    "group_identifier": "G",
+    "identifier": "ID-1",
+    "master_key": "1107570bbbff8c287d69bbfe43ba7c3a29befe473f6196c21a4ffa60",
+    "model": "AirTag1,1",
+    "name": "Keys",
+    "paired_at": "2026-09-01T00:00:00+00:00",
+    "serial_number": "SER1",
+    "skn": "4c2fa7fd684f292626ebff69b23c88bffbe091dfb75494e8e22ed224799dfee5",
+    "sks": "9d3499d91d7c39bced3c87cda31e7a1e185c36d467ac56d51950fac450703f77",
+    "type": "accessory"
+   }
+  },
+  {
+   "input": {
+    "alignment_date": "2026-08-02T01:02:03.654321-08:00",
+    "alignment_index": 5,
+    "group_identifier": null,
+    "identifier": "ID-2",
+    "master_key": "f0fa9d57286db1eafdc309606c0124a139efb9848a5597d0c2b72473",
+    "model": null,
+    "name": "Bag",
+    "paired_at": "2026-08-01T10:20:30.123456+05:30",
+    "serial_number": null,
+    "skn": "6d04303a61841535c48eaa9e12f3c805667dd16d841761bad0f84c7f2a72153e",
+    "sks": "d9cffae392ad0535843d4f0e782686feea6ec79907415958a2a0f4942d4cf109",
+    "type": "accessory"
+   },
+   "name": "offset+5:30_micro",
+   "python_roundtrip": {
+    "alignment_date": "2026-08-02T01:02:03.654321-08:00",
+    "alignment_index": 5,
+    "group_identifier": null,
+    "identifier": "ID-2",
+    "master_key": "f0fa9d57286db1eafdc309606c0124a139efb9848a5597d0c2b72473",
+    "model": null,
+    "name": "Bag",
+    "paired_at": "2026-08-01T10:20:30.123456+05:30",
+    "serial_number": null,
+    "skn": "6d04303a61841535c48eaa9e12f3c805667dd16d841761bad0f84c7f2a72153e",
+    "sks": "d9cffae392ad0535843d4f0e782686feea6ec79907415958a2a0f4942d4cf109",
+    "type": "accessory"
+   }
+  },
+  {
+   "input": {
+    "alignment_date": "2026-09-01T00:00:00+00:00",
+    "alignment_index": 0,
+    "group_identifier": null,
+    "identifier": null,
+    "master_key": "c97db89bb6ee9249f5434e9cd24006c3aa6debeb23cfd0ad5eac3198",
+    "model": null,
+    "name": null,
+    "paired_at": "2026-09-01T00:00:00+00:00",
+    "serial_number": null,
+    "skn": "9c6a1fea04d8e6e125f926149666f25139ba3be5d04ee6871161f2497ddf25db",
+    "sks": "b83bf3911339f0b72fcbcadcd841670db110deadd44b54f32105d9251bf8da00",
+    "type": "accessory"
+   },
+   "name": "nulls",
+   "python_roundtrip": {
+    "alignment_date": "2026-09-01T00:00:00+00:00",
+    "alignment_index": 0,
+    "group_identifier": null,
+    "identifier": null,
+    "master_key": "c97db89bb6ee9249f5434e9cd24006c3aa6debeb23cfd0ad5eac3198",
+    "model": null,
+    "name": null,
+    "paired_at": "2026-09-01T00:00:00+00:00",
+    "serial_number": null,
+    "skn": "9c6a1fea04d8e6e125f926149666f25139ba3be5d04ee6871161f2497ddf25db",
+    "sks": "b83bf3911339f0b72fcbcadcd841670db110deadd44b54f32105d9251bf8da00",
+    "type": "accessory"
+   }
+  },
+  {
+   "input": {
+    "alignment_date": "2026-10-02T03:04:05+00:00",
+    "alignment_index": 77,
+    "identifier": "ID-1",
+    "master_key": "1107570bbbff8c287d69bbfe43ba7c3a29befe473f6196c21a4ffa60",
+    "model": "AirTag1,1",
+    "name": "Keys",
+    "paired_at": "2026-09-01T00:00:00Z",
+    "skn": "4c2fa7fd684f292626ebff69b23c88bffbe091dfb75494e8e22ed224799dfee5",
+    "sks": "9d3499d91d7c39bced3c87cda31e7a1e185c36d467ac56d51950fac450703f77",
+    "type": "accessory"
+   },
+   "name": "older_export",
+   "python_roundtrip": {
+    "alignment_date": "2026-10-02T03:04:05+00:00",
+    "alignment_index": 77,
+    "group_identifier": null,
+    "identifier": "ID-1",
+    "master_key": "1107570bbbff8c287d69bbfe43ba7c3a29befe473f6196c21a4ffa60",
+    "model": "AirTag1,1",
+    "name": "Keys",
+    "paired_at": "2026-09-01T00:00:00+00:00",
+    "serial_number": null,
+    "skn": "4c2fa7fd684f292626ebff69b23c88bffbe091dfb75494e8e22ed224799dfee5",
+    "sks": "9d3499d91d7c39bced3c87cda31e7a1e185c36d467ac56d51950fac450703f77",
+    "type": "accessory"
+   }
+  },
+  {
+   "input": {
+    "alignment_date": "2026-10-02T03:04:05+00:00",
+    "alignment_index": 77,
+    "group_identifier": "G",
+    "identifier": "ID-1",
+    "master_key": "1107570bbbff8c287d69bbfe43ba7c3a29befe473f6196c21a4ffa60",
+    "model": "AirTag1,1",
+    "name": "Keys",
+    "paired_at": "2026-09-01 07:08:09+02:00",
+    "serial_number": "SER1",
+    "skn": "4c2fa7fd684f292626ebff69b23c88bffbe091dfb75494e8e22ed224799dfee5",
+    "sks": "9d3499d91d7c39bced3c87cda31e7a1e185c36d467ac56d51950fac450703f77",
+    "type": "accessory"
+   },
+   "name": "space_separator",
+   "python_roundtrip": {
+    "alignment_date": "2026-10-02T03:04:05+00:00",
+    "alignment_index": 77,
+    "group_identifier": "G",
+    "identifier": "ID-1",
+    "master_key": "1107570bbbff8c287d69bbfe43ba7c3a29befe473f6196c21a4ffa60",
+    "model": "AirTag1,1",
+    "name": "Keys",
+    "paired_at": "2026-09-01T07:08:09+02:00",
+    "serial_number": "SER1",
+    "skn": "4c2fa7fd684f292626ebff69b23c88bffbe091dfb75494e8e22ed224799dfee5",
+    "sks": "9d3499d91d7c39bced3c87cda31e7a1e185c36d467ac56d51950fac450703f77",
+    "type": "accessory"
+   }
+  },
+  {
+   "input": {
+    "alignment_date": null,
+    "alignment_index": null,
+    "group_identifier": "G",
+    "identifier": "ID-1",
+    "master_key": "1107570bbbff8c287d69bbfe43ba7c3a29befe473f6196c21a4ffa60",
+    "model": "AirTag1,1",
+    "name": "Keys",
+    "paired_at": "2026-09-01T00:00:00+00:00",
+    "serial_number": "SER1",
+    "skn": "4c2fa7fd684f292626ebff69b23c88bffbe091dfb75494e8e22ed224799dfee5",
+    "sks": "9d3499d91d7c39bced3c87cda31e7a1e185c36d467ac56d51950fac450703f77",
+    "type": "accessory"
+   },
+   "name": "null_alignment",
+   "python_roundtrip": {
+    "alignment_date": "2026-09-01T00:00:00+00:00",
+    "alignment_index": 0,
+    "group_identifier": "G",
+    "identifier": "ID-1",
+    "master_key": "1107570bbbff8c287d69bbfe43ba7c3a29befe473f6196c21a4ffa60",
+    "model": "AirTag1,1",
+    "name": "Keys",
+    "paired_at": "2026-09-01T00:00:00+00:00",
+    "serial_number": "SER1",
+    "skn": "4c2fa7fd684f292626ebff69b23c88bffbe091dfb75494e8e22ed224799dfee5",
+    "sks": "9d3499d91d7c39bced3c87cda31e7a1e185c36d467ac56d51950fac450703f77",
+    "type": "accessory"
+   }
+  }
+ ],
+ "serials": [
+  {
+   "input": null,
+   "out": null
+  },
+  {
+   "input": [],
+   "out": null
+  },
+  {
+   "input": [
+    "2006~#hw~#SERIAL1"
+   ],
+   "out": "SERIAL1"
+  },
+  {
+   "input": [
+    "a:/uuid~#SER2"
+   ],
+   "out": "SER2"
+  },
+  {
+   "input": [
+    "nodelimiter"
+   ],
+   "out": null
+  },
+  {
+   "input": [
+    "a:/u~#\u00b6M\u00a7hw\u00a743303258595a\u00a70"
+   ],
+   "out": "C02XYZ"
+  },
+  {
+   "input": [
+    "a:/u~#\u00b6M\u00a7hw"
+   ],
+   "out": null
+  },
+  {
+   "input": [
+    "a:/u~#\u00b6M\u00a7hw\u00a7zz\u00a70"
+   ],
+   "out": null
+  },
+  {
+   "input": [
+    "a:/u~#\u00b6M\u00a7hw\u00a7ff\u00a70"
+   ],
+   "out": null
+  },
+  {
+   "input": [
+    "x~#y~#z",
+    "ignored~#other"
+   ],
+   "out": "z"
+  }
+ ]
+}

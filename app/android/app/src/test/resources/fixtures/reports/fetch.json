@@ -1,0 +1,734 @@
+{
+ "rolling": [
+  {
+   "accessory": {
+    "alignment_date": "2026-10-01T00:00:00+00:00",
+    "alignment_index": 0,
+    "group_identifier": null,
+    "identifier": "A-ID",
+    "master_key": "1107570bbbff8c287d69bbfe43ba7c3a29befe473f6196c21a4ffa60",
+    "model": null,
+    "name": "A",
+    "paired_at": "2026-10-01T00:00:00+00:00",
+    "serial_number": null,
+    "skn": "4c2fa7fd684f292626ebff69b23c88bffbe091dfb75494e8e22ed224799dfee5",
+    "sks": "9d3499d91d7c39bced3c87cda31e7a1e185c36d467ac56d51950fac450703f77",
+    "type": "accessory"
+   },
+   "alignment_epoch": 1791025207,
+   "alignment_index": 100,
+   "calls": [
+    [
+     {
+      "primary": {
+       "count": 241,
+       "ids": null,
+       "sha256": "7d5336876c93abbaeb217dee77be2790cb8f9d9f108175bdbb2122363dcc5c95"
+      },
+      "secondary": {
+       "count": 4,
+       "ids": [
+        "0Mh9s9scoiFg+Dg/lKW/gAGAGnZ/yCcG82cApvA/g9Y=",
+        "7rROaLubdiRqtvO5yuck9mqHiLKqe+TffNqvLMED4kE=",
+        "hiF7NdadoieXUF4Np+LB1H19Dg/gICThubQvsjez3wE=",
+        "wPNo+QbenqLSIiKjOz9q2NlGXAFIgigKfKqfeNeu8Rk="
+       ],
+       "sha256": "7d78ce5dbece6caf7eb1eb1479eb8200cbb65a991807f6f25e4f7e24faad2a4c"
+      }
+     }
+    ]
+   ],
+   "name": "single_request_primary_then_secondary",
+   "now": "2026-10-03T12:00:00+00:00",
+   "only_latest": true,
+   "replies": [
+    [
+     {
+      "hashed": "lFwyDJ0CpOl5ey1cD2PJv+0cOIj2cUhEBzFFRPROmGM=",
+      "payload": "MHEXtwMEVommMR/7VPCyFJLNI1pwDpv3iMV8Lc+ygq6cFQShhk3KZ2d45jCaO4XmqiOF5pLwFDNNGlQg41OYqUzWsqYT5L1h9r3aN3Hr6iHJ4Ol+DvWcvg=="
+     },
+     {
+      "hashed": "0Mh9s9scoiFg+Dg/lKW/gAGAGnZ/yCcG82cApvA/g9Y=",
+      "payload": "MHEJo1UBBFzUsKTI4gR3ldHukf2RcENFQrjUlUJ6zdF7IoPOxXreqWehHmwOQRBk+QwFVkyG3rnpZz8I+5altuurgRapWTA66EEu8AeEzt+NvKM7H7Uy/us="
+     }
+    ]
+   ],
+   "reports": [
+    {
+     "acc": 40,
+     "conf": 1,
+     "hashed": "0Mh9s9scoiFg+Dg/lKW/gAGAGnZ/yCcG82cApvA/g9Y=",
+     "lat": 48.86,
+     "lon": 2.36,
+     "status": 2,
+     "ts": 1791021603
+    },
+    {
+     "acc": 12,
+     "conf": 3,
+     "hashed": "lFwyDJ0CpOl5ey1cD2PJv+0cOIj2cUhEBzFFRPROmGM=",
+     "lat": 48.85,
+     "lon": 2.35,
+     "status": 1,
+     "ts": 1791025207
+    }
+   ]
+  },
+  {
+   "accessory": {
+    "alignment_date": "2026-10-01T00:00:00+00:00",
+    "alignment_index": 0,
+    "group_identifier": null,
+    "identifier": "A-ID",
+    "master_key": "1107570bbbff8c287d69bbfe43ba7c3a29befe473f6196c21a4ffa60",
+    "model": null,
+    "name": "A",
+    "paired_at": "2026-10-01T00:00:00+00:00",
+    "serial_number": null,
+    "skn": "4c2fa7fd684f292626ebff69b23c88bffbe091dfb75494e8e22ed224799dfee5",
+    "sks": "9d3499d91d7c39bced3c87cda31e7a1e185c36d467ac56d51950fac450703f77",
+    "type": "accessory"
+   },
+   "alignment_epoch": 1791025207,
+   "alignment_index": 100,
+   "calls": [
+    [
+     {
+      "primary": {
+       "count": 241,
+       "ids": null,
+       "sha256": "7d5336876c93abbaeb217dee77be2790cb8f9d9f108175bdbb2122363dcc5c95"
+      },
+      "secondary": {
+       "count": 4,
+       "ids": [
+        "0Mh9s9scoiFg+Dg/lKW/gAGAGnZ/yCcG82cApvA/g9Y=",
+        "7rROaLubdiRqtvO5yuck9mqHiLKqe+TffNqvLMED4kE=",
+        "hiF7NdadoieXUF4Np+LB1H19Dg/gICThubQvsjez3wE=",
+        "wPNo+QbenqLSIiKjOz9q2NlGXAFIgigKfKqfeNeu8Rk="
+       ],
+       "sha256": "7d78ce5dbece6caf7eb1eb1479eb8200cbb65a991807f6f25e4f7e24faad2a4c"
+      }
+     }
+    ]
+   ],
+   "name": "single_request_secondary_then_primary",
+   "now": "2026-10-03T12:00:00+00:00",
+   "only_latest": true,
+   "replies": [
+    [
+     {
+      "hashed": "0Mh9s9scoiFg+Dg/lKW/gAGAGnZ/yCcG82cApvA/g9Y=",
+      "payload": "MHEJo1UBBFzUsKTI4gR3ldHukf2RcENFQrjUlUJ6zdF7IoPOxXreqWehHmwOQRBk+QwFVkyG3rnpZz8I+5altuurgRapWTA66EEu8AeEzt+NvKM7H7Uy/us="
+     },
+     {
+      "hashed": "lFwyDJ0CpOl5ey1cD2PJv+0cOIj2cUhEBzFFRPROmGM=",
+      "payload": "MHEXtwMEVommMR/7VPCyFJLNI1pwDpv3iMV8Lc+ygq6cFQShhk3KZ2d45jCaO4XmqiOF5pLwFDNNGlQg41OYqUzWsqYT5L1h9r3aN3Hr6iHJ4Ol+DvWcvg=="
+     }
+    ]
+   ],
+   "reports": [
+    {
+     "acc": 40,
+     "conf": 1,
+     "hashed": "0Mh9s9scoiFg+Dg/lKW/gAGAGnZ/yCcG82cApvA/g9Y=",
+     "lat": 48.86,
+     "lon": 2.36,
+     "status": 2,
+     "ts": 1791021603
+    },
+    {
+     "acc": 12,
+     "conf": 3,
+     "hashed": "lFwyDJ0CpOl5ey1cD2PJv+0cOIj2cUhEBzFFRPROmGM=",
+     "lat": 48.85,
+     "lon": 2.35,
+     "status": 1,
+     "ts": 1791025207
+    }
+   ]
+  },
+  {
+   "accessory": {
+    "alignment_date": "2026-10-01T00:00:00+00:00",
+    "alignment_index": 0,
+    "group_identifier": null,
+    "identifier": "A-ID",
+    "master_key": "1107570bbbff8c287d69bbfe43ba7c3a29befe473f6196c21a4ffa60",
+    "model": null,
+    "name": "A",
+    "paired_at": "2026-10-01T00:00:00+00:00",
+    "serial_number": null,
+    "skn": "4c2fa7fd684f292626ebff69b23c88bffbe091dfb75494e8e22ed224799dfee5",
+    "sks": "9d3499d91d7c39bced3c87cda31e7a1e185c36d467ac56d51950fac450703f77",
+    "type": "accessory"
+   },
+   "alignment_epoch": 1791032400,
+   "alignment_index": 70,
+   "calls": [
+    [
+     {
+      "primary": {
+       "count": 241,
+       "ids": null,
+       "sha256": "7d5336876c93abbaeb217dee77be2790cb8f9d9f108175bdbb2122363dcc5c95"
+      },
+      "secondary": {
+       "count": 4,
+       "ids": [
+        "0Mh9s9scoiFg+Dg/lKW/gAGAGnZ/yCcG82cApvA/g9Y=",
+        "7rROaLubdiRqtvO5yuck9mqHiLKqe+TffNqvLMED4kE=",
+        "hiF7NdadoieXUF4Np+LB1H19Dg/gICThubQvsjez3wE=",
+        "wPNo+QbenqLSIiKjOz9q2NlGXAFIgigKfKqfeNeu8Rk="
+       ],
+       "sha256": "7d78ce5dbece6caf7eb1eb1479eb8200cbb65a991807f6f25e4f7e24faad2a4c"
+      }
+     }
+    ]
+   ],
+   "name": "single_request_invalid_by_domain_rules",
+   "now": "2026-10-03T12:00:00+00:00",
+   "only_latest": true,
+   "replies": [
+    [
+     {
+      "hashed": "Z4/vwPEbE9WmzxK3/rfFSPZyLXLAEczlUOjGMSH84jI=",
+      "payload": "MHD7kAMEfwStJBOl974ytbqOXn2kU/6WKeBOxG/bLfjscGv+0msUnpNN77Tf4ENlWWmsXcOYtOxN1+CfjNlzkkmrj8eja3oFqKH/iLtcgnDCrdOZ6f0WnQ=="
+     },
+     {
+      "hashed": "zwxleWwchQwPATgrmHF+M6CH86ji4f8pQLCUrExmFu8=",
+      "payload": "MHEJoAMEoFMZIlUkcWneKDNcch/9KUh0vbxXM0t1vgIBN53LmE1VnKN7IfzCDVEGgQhPIlVBMmjGN5LsY4ii1iV57a428Bq+CtgH2ePDLxl2VvVlYO2C1Q=="
+     },
+     {
+      "hashed": "McITH1szGWpiSKLGJM7vNy78GMPWLC8zG3hHL4+c1PQ=",
+      "payload": "MHEz0AMEZdJmVjiYFVz4y5TTI4Np4gVj0ZYehR2BK9s/t0hE9pqU52+wcTX2d4Bxqkvbp7+Nd7txGZvGT2AIydbgtA3yISKcfunpdSldUchRD2i1Y+MZvw=="
+     }
+    ]
+   ],
+   "reports": [
+    {
+     "acc": 20,
+     "conf": 3,
+     "hashed": "Z4/vwPEbE9WmzxK3/rfFSPZyLXLAEczlUOjGMSH84jI=",
+     "lat": 40.0,
+     "lon": 8.0,
+     "status": 1,
+     "ts": 1791018000
+    },
+    {
+     "acc": 20,
+     "conf": 3,
+     "hashed": "zwxleWwchQwPATgrmHF+M6CH86ji4f8pQLCUrExmFu8=",
+     "lat": 0.0,
+     "lon": 0.0,
+     "status": 1,
+     "ts": 1791021600
+    },
+    {
+     "acc": 20,
+     "conf": 3,
+     "hashed": "McITH1szGWpiSKLGJM7vNy78GMPWLC8zG3hHL4+c1PQ=",
+     "lat": 41.0,
+     "lon": 9.0,
+     "status": 1,
+     "ts": 1791032400
+    }
+   ]
+  },
+  {
+   "accessory": {
+    "alignment_date": "2026-10-01T00:00:00+00:00",
+    "alignment_index": 0,
+    "group_identifier": null,
+    "identifier": "A-ID",
+    "master_key": "1107570bbbff8c287d69bbfe43ba7c3a29befe473f6196c21a4ffa60",
+    "model": null,
+    "name": "A",
+    "paired_at": "2026-10-01T00:00:00+00:00",
+    "serial_number": null,
+    "skn": "4c2fa7fd684f292626ebff69b23c88bffbe091dfb75494e8e22ed224799dfee5",
+    "sks": "9d3499d91d7c39bced3c87cda31e7a1e185c36d467ac56d51950fac450703f77",
+    "type": "accessory"
+   },
+   "alignment_epoch": 1790812800,
+   "alignment_index": 0,
+   "calls": [
+    [
+     {
+      "primary": {
+       "count": 241,
+       "ids": null,
+       "sha256": "7d5336876c93abbaeb217dee77be2790cb8f9d9f108175bdbb2122363dcc5c95"
+      },
+      "secondary": {
+       "count": 4,
+       "ids": [
+        "0Mh9s9scoiFg+Dg/lKW/gAGAGnZ/yCcG82cApvA/g9Y=",
+        "7rROaLubdiRqtvO5yuck9mqHiLKqe+TffNqvLMED4kE=",
+        "hiF7NdadoieXUF4Np+LB1H19Dg/gICThubQvsjez3wE=",
+        "wPNo+QbenqLSIiKjOz9q2NlGXAFIgigKfKqfeNeu8Rk="
+       ],
+       "sha256": "7d78ce5dbece6caf7eb1eb1479eb8200cbb65a991807f6f25e4f7e24faad2a4c"
+      }
+     }
+    ]
+   ],
+   "name": "single_request_no_reports",
+   "now": "2026-10-03T12:00:00+00:00",
+   "only_latest": true,
+   "replies": [
+    []
+   ],
+   "reports": []
+  },
+  {
+   "accessory": {
+    "alignment_date": "2026-09-20T00:00:00+00:00",
+    "alignment_index": 1800,
+    "group_identifier": null,
+    "identifier": "B-ID",
+    "master_key": "f0fa9d57286db1eafdc309606c0124a139efb9848a5597d0c2b72473",
+    "model": null,
+    "name": "B",
+    "paired_at": "2026-09-01T00:00:00+00:00",
+    "serial_number": null,
+    "skn": "6d04303a61841535c48eaa9e12f3c805667dd16d841761bad0f84c7f2a72153e",
+    "sks": "d9cffae392ad0535843d4f0e782686feea6ec79907415958a2a0f4942d4cf109",
+    "type": "accessory"
+   },
+   "alignment_epoch": 1791583200,
+   "alignment_index": 3300,
+   "calls": [
+    [
+     {
+      "primary": {
+       "count": 290,
+       "ids": null,
+       "sha256": "722d1df56658f336f3b14d3fa5214b6e3d902847aa39b282ba383ad224d2e0b5"
+      },
+      "secondary": {
+       "count": 5,
+       "ids": [
+        "8L3iSorJ9rfpOeRxDN9A3r3golPROhNW7uKuIt5UAXY=",
+        "SBkzTr0mYB4HqI1h7AwXFzg6zRAOToztR44RaIPO2rw=",
+        "WrfNulf5ErtwbO14OC5kSZZB1gSAG1cAPFExQjoTgaY=",
+        "ouRo8I7ehdT267H7vsIDYDYtOe9beMtjtCUzOrPY4UE=",
+        "y6n9uJdtPN8p9XeBfOMwPT0/3iS+GDGp0PXvoPwS3tk="
+       ],
+       "sha256": "5dfcc9fe437b92cfbc60bce149246f22226405b0364ec7c763c7aaaf743569f7"
+      }
+     }
+    ],
+    [
+     {
+      "primary": {
+       "count": 290,
+       "ids": null,
+       "sha256": "cd1e4c1ac0af8d5711a9150d681fe30425f90a7ca2aa3f42c8c28720ec748be0"
+      },
+      "secondary": {
+       "count": 5,
+       "ids": [
+        "4XqT1f0pse5CC4cK9GGf4+xxUbxFNhiXZHcl/SZbuUY=",
+        "bSaONASHe5tENC8phami0kiKbq3b4J+VHlX0elwOYog=",
+        "gZDaXFS8FJfL47yBLZ1ssFaKoFlaOFOaQ3K19/9LdbE=",
+        "ouRo8I7ehdT267H7vsIDYDYtOe9beMtjtCUzOrPY4UE=",
+        "y6n9uJdtPN8p9XeBfOMwPT0/3iS+GDGp0PXvoPwS3tk="
+       ],
+       "sha256": "3a4143573890c601bc8dfb3ae8aff319bffbe61462596e4026cb5f192d0a6961"
+      }
+     }
+    ]
+   ],
+   "name": "chunked_only_latest",
+   "now": "2026-10-10T00:00:00+00:00",
+   "only_latest": true,
+   "replies": [
+    [],
+    [
+     {
+      "hashed": "NO3lefN15dEzblrQnGEdZ+fXP1I9wEmue+nOFpD6OlQ=",
+      "payload": "MHmbYAIEUQjkIzoi9ATjiO/PKskrmNdb4/XxNwYuO3EpgHUjp9YDeuhpM3Iws5Yj2gI+YlkhBCfY8+k+GEANgcp6miHfzEfniVxnj9r+wZ4R/BLN4rFO7g=="
+     }
+    ]
+   ],
+   "reports": [
+    {
+     "acc": 33,
+     "conf": 2,
+     "hashed": "NO3lefN15dEzblrQnGEdZ+fXP1I9wEmue+nOFpD6OlQ=",
+     "lat": -22.9068,
+     "lon": -43.1729,
+     "status": 0,
+     "ts": 1791583200
+    }
+   ]
+  },
+  {
+   "accessory": {
+    "alignment_date": "2026-09-20T00:00:00+00:00",
+    "alignment_index": 1800,
+    "group_identifier": null,
+    "identifier": "B-ID",
+    "master_key": "f0fa9d57286db1eafdc309606c0124a139efb9848a5597d0c2b72473",
+    "model": null,
+    "name": "B",
+    "paired_at": "2026-09-01T00:00:00+00:00",
+    "serial_number": null,
+    "skn": "6d04303a61841535c48eaa9e12f3c805667dd16d841761bad0f84c7f2a72153e",
+    "sks": "d9cffae392ad0535843d4f0e782686feea6ec79907415958a2a0f4942d4cf109",
+    "type": "accessory"
+   },
+   "alignment_epoch": 1791583200,
+   "alignment_index": 3300,
+   "calls": [
+    [
+     {
+      "primary": {
+       "count": 290,
+       "ids": null,
+       "sha256": "722d1df56658f336f3b14d3fa5214b6e3d902847aa39b282ba383ad224d2e0b5"
+      },
+      "secondary": {
+       "count": 5,
+       "ids": [
+        "8L3iSorJ9rfpOeRxDN9A3r3golPROhNW7uKuIt5UAXY=",
+        "SBkzTr0mYB4HqI1h7AwXFzg6zRAOToztR44RaIPO2rw=",
+        "WrfNulf5ErtwbO14OC5kSZZB1gSAG1cAPFExQjoTgaY=",
+        "ouRo8I7ehdT267H7vsIDYDYtOe9beMtjtCUzOrPY4UE=",
+        "y6n9uJdtPN8p9XeBfOMwPT0/3iS+GDGp0PXvoPwS3tk="
+       ],
+       "sha256": "5dfcc9fe437b92cfbc60bce149246f22226405b0364ec7c763c7aaaf743569f7"
+      }
+     }
+    ],
+    [
+     {
+      "primary": {
+       "count": 290,
+       "ids": null,
+       "sha256": "cd1e4c1ac0af8d5711a9150d681fe30425f90a7ca2aa3f42c8c28720ec748be0"
+      },
+      "secondary": {
+       "count": 5,
+       "ids": [
+        "4XqT1f0pse5CC4cK9GGf4+xxUbxFNhiXZHcl/SZbuUY=",
+        "bSaONASHe5tENC8phami0kiKbq3b4J+VHlX0elwOYog=",
+        "gZDaXFS8FJfL47yBLZ1ssFaKoFlaOFOaQ3K19/9LdbE=",
+        "ouRo8I7ehdT267H7vsIDYDYtOe9beMtjtCUzOrPY4UE=",
+        "y6n9uJdtPN8p9XeBfOMwPT0/3iS+GDGp0PXvoPwS3tk="
+       ],
+       "sha256": "3a4143573890c601bc8dfb3ae8aff319bffbe61462596e4026cb5f192d0a6961"
+      }
+     }
+    ],
+    [
+     {
+      "primary": {
+       "count": 290,
+       "ids": null,
+       "sha256": "e886c4b374f8e4ea8acb04a64708d843025d23e2a67c9f9af50592ff062e5961"
+      },
+      "secondary": {
+       "count": 5,
+       "ids": [
+        "4XqT1f0pse5CC4cK9GGf4+xxUbxFNhiXZHcl/SZbuUY=",
+        "URnMGvUjx9koHjlJ+LLkOw17LFnKBe7Wrs0DAqcd9oI=",
+        "gZDaXFS8FJfL47yBLZ1ssFaKoFlaOFOaQ3K19/9LdbE=",
+        "xtcE0oVq6HoIvTk9quiOcPVD3bWtwZAqT0be/upA/Jc=",
+        "y0Sp7mBdMyMuxoMrdKJuYVCqmwnIyIgcL7dEI/whxeE="
+       ],
+       "sha256": "d1c9a6bea6faa467d684b23881f3c46a8327097f5c40e8604a2c305445e21a21"
+      }
+     }
+    ],
+    [
+     {
+      "primary": {
+       "count": 215,
+       "ids": null,
+       "sha256": "4de510e62a985b7afc679256dc335cf19a7aefd07a026d560312f997396b320f"
+      },
+      "secondary": {
+       "count": 4,
+       "ids": [
+        "CPs1t7QIm0rImltYyvI+JTdxulZeGZNmFbzSPyiaH3I=",
+        "xtcE0oVq6HoIvTk9quiOcPVD3bWtwZAqT0be/upA/Jc=",
+        "y0Sp7mBdMyMuxoMrdKJuYVCqmwnIyIgcL7dEI/whxeE=",
+        "zn7VHNE+ON7uvsWymnhLTJnfIZFYn87fJaICJSdYdRg="
+       ],
+       "sha256": "334edc94a37f9413cb652cfc61b0534684f8e0dc3b05069e53700b0f31139b86"
+      }
+     }
+    ]
+   ],
+   "name": "chunked_full_history",
+   "now": "2026-10-10T00:00:00+00:00",
+   "only_latest": false,
+   "replies": [
+    [],
+    [
+     {
+      "hashed": "NO3lefN15dEzblrQnGEdZ+fXP1I9wEmue+nOFpD6OlQ=",
+      "payload": "MHmbYAIEUQjkIzoi9ATjiO/PKskrmNdb4/XxNwYuO3EpgHUjp9YDeuhpM3Iws5Yj2gI+YlkhBCfY8+k+GEANgcp6miHfzEfniVxnj9r+wZ4R/BLN4rFO7g=="
+     }
+    ],
+    [],
+    [],
+    [
+     {
+      "hashed": "uNMY3woy6Kkc4ID0Ss7TsUm6JIz/OE60W1iIfoeMHCw=",
+      "payload": "MHcikAEEZArRMApOZf6PSxk7leTYR1XKfPgvsWg04zp0N5+qgYGtlUSic9lGZHA6USxfjKhFeOmBIOPLrIZjFjBEo4nb70T7xAGBcBG5JMLVF1y1AUjitA=="
+     }
+    ]
+   ],
+   "reports": [
+    {
+     "acc": 33,
+     "conf": 2,
+     "hashed": "NO3lefN15dEzblrQnGEdZ+fXP1I9wEmue+nOFpD6OlQ=",
+     "lat": -22.9068,
+     "lon": -43.1729,
+     "status": 0,
+     "ts": 1791583200
+    }
+   ]
+  },
+  {
+   "accessory": {
+    "alignment_date": "2026-09-20T00:00:00+00:00",
+    "alignment_index": 1800,
+    "group_identifier": null,
+    "identifier": "B-ID",
+    "master_key": "f0fa9d57286db1eafdc309606c0124a139efb9848a5597d0c2b72473",
+    "model": null,
+    "name": "B",
+    "paired_at": "2026-09-01T00:00:00+00:00",
+    "serial_number": null,
+    "skn": "6d04303a61841535c48eaa9e12f3c805667dd16d841761bad0f84c7f2a72153e",
+    "sks": "d9cffae392ad0535843d4f0e782686feea6ec79907415958a2a0f4942d4cf109",
+    "type": "accessory"
+   },
+   "alignment_epoch": 1789862400,
+   "alignment_index": 1800,
+   "calls": [
+    [
+     {
+      "primary": {
+       "count": 290,
+       "ids": null,
+       "sha256": "722d1df56658f336f3b14d3fa5214b6e3d902847aa39b282ba383ad224d2e0b5"
+      },
+      "secondary": {
+       "count": 5,
+       "ids": [
+        "8L3iSorJ9rfpOeRxDN9A3r3golPROhNW7uKuIt5UAXY=",
+        "SBkzTr0mYB4HqI1h7AwXFzg6zRAOToztR44RaIPO2rw=",
+        "WrfNulf5ErtwbO14OC5kSZZB1gSAG1cAPFExQjoTgaY=",
+        "ouRo8I7ehdT267H7vsIDYDYtOe9beMtjtCUzOrPY4UE=",
+        "y6n9uJdtPN8p9XeBfOMwPT0/3iS+GDGp0PXvoPwS3tk="
+       ],
+       "sha256": "5dfcc9fe437b92cfbc60bce149246f22226405b0364ec7c763c7aaaf743569f7"
+      }
+     }
+    ],
+    [
+     {
+      "primary": {
+       "count": 290,
+       "ids": null,
+       "sha256": "cd1e4c1ac0af8d5711a9150d681fe30425f90a7ca2aa3f42c8c28720ec748be0"
+      },
+      "secondary": {
+       "count": 5,
+       "ids": [
+        "4XqT1f0pse5CC4cK9GGf4+xxUbxFNhiXZHcl/SZbuUY=",
+        "bSaONASHe5tENC8phami0kiKbq3b4J+VHlX0elwOYog=",
+        "gZDaXFS8FJfL47yBLZ1ssFaKoFlaOFOaQ3K19/9LdbE=",
+        "ouRo8I7ehdT267H7vsIDYDYtOe9beMtjtCUzOrPY4UE=",
+        "y6n9uJdtPN8p9XeBfOMwPT0/3iS+GDGp0PXvoPwS3tk="
+       ],
+       "sha256": "3a4143573890c601bc8dfb3ae8aff319bffbe61462596e4026cb5f192d0a6961"
+      }
+     }
+    ],
+    [
+     {
+      "primary": {
+       "count": 290,
+       "ids": null,
+       "sha256": "e886c4b374f8e4ea8acb04a64708d843025d23e2a67c9f9af50592ff062e5961"
+      },
+      "secondary": {
+       "count": 5,
+       "ids": [
+        "4XqT1f0pse5CC4cK9GGf4+xxUbxFNhiXZHcl/SZbuUY=",
+        "URnMGvUjx9koHjlJ+LLkOw17LFnKBe7Wrs0DAqcd9oI=",
+        "gZDaXFS8FJfL47yBLZ1ssFaKoFlaOFOaQ3K19/9LdbE=",
+        "xtcE0oVq6HoIvTk9quiOcPVD3bWtwZAqT0be/upA/Jc=",
+        "y0Sp7mBdMyMuxoMrdKJuYVCqmwnIyIgcL7dEI/whxeE="
+       ],
+       "sha256": "d1c9a6bea6faa467d684b23881f3c46a8327097f5c40e8604a2c305445e21a21"
+      }
+     }
+    ],
+    [
+     {
+      "primary": {
+       "count": 290,
+       "ids": null,
+       "sha256": "c3bab8c71473c457441e82249f8e225307fbfc6649000859ad549b559ad14701"
+      },
+      "secondary": {
+       "count": 5,
+       "ids": [
+        "CPs1t7QIm0rImltYyvI+JTdxulZeGZNmFbzSPyiaH3I=",
+        "JZAHWo+Q3/muJ8+SYgchViJqDT5y4qkU3KMdSrSLa8o=",
+        "xtcE0oVq6HoIvTk9quiOcPVD3bWtwZAqT0be/upA/Jc=",
+        "y0Sp7mBdMyMuxoMrdKJuYVCqmwnIyIgcL7dEI/whxeE=",
+        "zn7VHNE+ON7uvsWymnhLTJnfIZFYn87fJaICJSdYdRg="
+       ],
+       "sha256": "9bfcef2a6cdbec350759cd0ab644ca84d9ad6ff07b4798f0f28e29eff8f98a05"
+      }
+     }
+    ],
+    [
+     {
+      "primary": {
+       "count": 290,
+       "ids": null,
+       "sha256": "ca7710998dfacd97a4360fd0e27afb23b39c43af14045109654f190c16c5905f"
+      },
+      "secondary": {
+       "count": 5,
+       "ids": [
+        "/4vD41PcSUrPlSDdtwfkRDvZPLKJyLyluLRPMmI5NWI=",
+        "CPs1t7QIm0rImltYyvI+JTdxulZeGZNmFbzSPyiaH3I=",
+        "D2JQC24LLWwMTIgS+DGkQ1rzk/mUKHE+I8/9fZBQjlY=",
+        "DjDX8oxCIs5Tq73dxFF/e9XNtZetbe7y4oSojJXebE4=",
+        "JZAHWo+Q3/muJ8+SYgchViJqDT5y4qkU3KMdSrSLa8o="
+       ],
+       "sha256": "eddfb119ac2019de5487f7713c11a579adb40bc553c159afd0f9d1b2d806e134"
+      }
+     }
+    ],
+    [
+     {
+      "primary": {
+       "count": 290,
+       "ids": null,
+       "sha256": "824d718515eac1ddeb10a8f0a3b4421fc3685ab982b6b0cdb2d496ffe79b59b3"
+      },
+      "secondary": {
+       "count": 5,
+       "ids": [
+        "D2JQC24LLWwMTIgS+DGkQ1rzk/mUKHE+I8/9fZBQjlY=",
+        "DjDX8oxCIs5Tq73dxFF/e9XNtZetbe7y4oSojJXebE4=",
+        "NsdQp0fEWFd1DwKIjx8wN/O328fu5WwG3PM2/q5x0O8=",
+        "aLjyWbr2Mb9mfz8Gmo0rYgyYtgEeIbOIjrPpitqw1A8=",
+        "efb1P6ifxO6IllqU2BoT5RDsJOnwo0IeMf90tnjPAF0="
+       ],
+       "sha256": "c8ed8dd169d92e9a63f141ba8f01d0d75eefdf07534b7f0232cabb1e2729eee9"
+      }
+     }
+    ],
+    [
+     {
+      "primary": {
+       "count": 181,
+       "ids": null,
+       "sha256": "9bdc548ee9ac85bde2bdd68592614ee8a324243ccedaad6cda096b32a41c12ed"
+      },
+      "secondary": {
+       "count": 4,
+       "ids": [
+        "NsdQp0fEWFd1DwKIjx8wN/O328fu5WwG3PM2/q5x0O8=",
+        "RoTYky6wqJyPTh5vwZv/6MlMbYNi/fHp+bwjNGsIjqs=",
+        "cXW783X4m7hT8yXoB/Lv0bsIGHGB4L2xSFSSUB8QCBY=",
+        "efb1P6ifxO6IllqU2BoT5RDsJOnwo0IeMf90tnjPAF0="
+       ],
+       "sha256": "e872a5619ebb40e3f206682d7ce4baa77b69964b4ca6c94b8aef6a01cc8ed90e"
+      }
+     }
+    ]
+   ],
+   "name": "chunked_nothing_found",
+   "now": "2026-10-10T00:00:00+00:00",
+   "only_latest": true,
+   "replies": [],
+   "reports": []
+  }
+ ],
+ "static": {
+  "calls": [
+   [
+    {
+     "primary": [
+      "JkSpQoNDc6fAoargo/MRkRDEpoErSC0sidWaA3cjKk0="
+     ],
+     "secondary": []
+    },
+    {
+     "primary": [
+      "fIniBytwHLoo+VPfxa4hjFOq8VTQz5MvPmzPAS7CzKg="
+     ],
+     "secondary": []
+    }
+   ]
+  ],
+  "keys": [
+   "GRzHyPdRFH6nHgMnOfpl7quw0PBFqK3aI2Cndw==",
+   "MxYAlA5/+Ja7LN8X3kkwB9NYYnPl7uqxuyqVxA=="
+  ],
+  "now": "2026-10-03T12:00:00+00:00",
+  "replies": [
+   [
+    {
+     "hashed": "JkSpQoNDc6fAoargo/MRkRDEpoErSC0sidWaA3cjKk0=",
+     "payload": "MHD7kAMEfwStJBOl974ytbqOXn2kU/6WKeBOxG/bLfjscGv+0msUnpNN77Tf4ENlWWmsXcOYtOxN1+CfjNlF92OSHdwHsjCGlAYamGh293PRmemyhLjM6g=="
+    },
+    {
+     "hashed": "fIniBytwHLoo+VPfxa4hjFOq8VTQz5MvPmzPAS7CzKg=",
+     "payload": "MHD8vAIEQahVicwqxqDmcd53WbyHaUi0fe6HOUBn4wjhm3y9ONkAH8tfjnId1vLijJJ9f7KrQbpEgjWlyUNbXDW5i+dNOiuEo6y2vqxK6XgRjHpS1ze8pA=="
+    },
+    {
+     "hashed": "JkSpQoNDc6fAoargo/MRkRDEpoErSC0sidWaA3cjKk0=",
+     "payload": "MHECmAEE5N9Han+pIuSKWJg3QP9Akw6Nm5SuEKPYSOB/awYZRSzcpVHze2VeZ/NGXRDg1Nrsa43WdoX8f/+ddg5uKMCHDPN4HRsCYnVCcesJpnGjYKRSfA=="
+    }
+   ]
+  ],
+  "reports": {
+   "GRzHyPdRFH6nHgMnOfpl7quw0PBFqK3aI2Cndw==": [
+    {
+     "acc": 7,
+     "conf": 3,
+     "hashed": "JkSpQoNDc6fAoargo/MRkRDEpoErSC0sidWaA3cjKk0=",
+     "lat": 10.0,
+     "lon": 20.0,
+     "status": 1,
+     "ts": 1791018000
+    },
+    {
+     "acc": 9,
+     "conf": 1,
+     "hashed": "JkSpQoNDc6fAoargo/MRkRDEpoErSC0sidWaA3cjKk0=",
+     "lat": 10.5,
+     "lon": 20.5,
+     "status": 3,
+     "ts": 1791019800
+    }
+   ],
+   "MxYAlA5/+Ja7LN8X3kkwB9NYYnPl7uqxuyqVxA==": [
+    {
+     "acc": 8,
+     "conf": 2,
+     "hashed": "fIniBytwHLoo+VPfxa4hjFOq8VTQz5MvPmzPAS7CzKg=",
+     "lat": 11.0,
+     "lon": 21.0,
+     "status": 2,
+     "ts": 1791018300
+    }
+   ]
+  }
+ }
+}

@@ -1,0 +1,274 @@
+{
+ "encode_length": {
+  "0": "00",
+  "127": "7f",
+  "128": "8180",
+  "255": "81ff",
+  "256": "820100",
+  "5": "05",
+  "65535": "82ffff",
+  "65536": "83010000"
+ },
+ "errors": {
+  "children_of_primitive": {
+   "data": "0403616263",
+   "error": "DerError"
+  },
+  "expect_app_wrong": {
+   "data": "3003040161",
+   "error": "DerError"
+  },
+  "indefinite": {
+   "data": "30800000",
+   "error": "DerError"
+  },
+  "length_past_end": {
+   "data": "0405616263",
+   "error": "DerError"
+  },
+  "long_length_past_end": {
+   "data": "048201",
+   "error": "DerError"
+  },
+  "no_length": {
+   "data": "04",
+   "error": "DerError"
+  },
+  "truncated_tag": {
+   "data": "",
+   "error": null
+  },
+  "unterminated_high_tag": {
+   "data": "9f81",
+   "error": "DerError"
+  },
+  "unwrap_two": {
+   "data": "a006040161040162",
+   "error": "DerError"
+  }
+ },
+ "parsed": {
+  "empty_int": {
+   "children": [
+    null
+   ],
+   "data": "0200",
+   "elements": [
+    {
+     "cls": 0,
+     "constructed": false,
+     "content": "",
+     "raw": "0200",
+     "tag": 2
+    }
+   ],
+   "ints": [
+    0
+   ]
+  },
+  "high_tag": {
+   "children": [
+    null,
+    null
+   ],
+   "data": "9f8100026869040178",
+   "elements": [
+    {
+     "cls": 128,
+     "constructed": false,
+     "content": "6869",
+     "raw": "9f8100026869",
+     "tag": 128
+    },
+    {
+     "cls": 0,
+     "constructed": false,
+     "content": "78",
+     "raw": "040178",
+     "tag": 4
+    }
+   ],
+   "ints": []
+  },
+  "ints": {
+   "children": [
+    [
+     {
+      "cls": 0,
+      "constructed": false,
+      "content": "00",
+      "raw": "020100",
+      "tag": 2
+     },
+     {
+      "cls": 0,
+      "constructed": false,
+      "content": "01",
+      "raw": "020101",
+      "tag": 2
+     },
+     {
+      "cls": 0,
+      "constructed": false,
+      "content": "7f",
+      "raw": "02017f",
+      "tag": 2
+     },
+     {
+      "cls": 0,
+      "constructed": false,
+      "content": "0080",
+      "raw": "02020080",
+      "tag": 2
+     },
+     {
+      "cls": 0,
+      "constructed": false,
+      "content": "ff",
+      "raw": "0201ff",
+      "tag": 2
+     },
+     {
+      "cls": 0,
+      "constructed": false,
+      "content": "ff7f",
+      "raw": "0202ff7f",
+      "tag": 2
+     },
+     {
+      "cls": 0,
+      "constructed": false,
+      "content": "400000000000000000",
+      "raw": "0209400000000000000000",
+      "tag": 2
+     }
+    ]
+   ],
+   "data": "301f02010002010102017f020200800201ff0202ff7f0209400000000000000000",
+   "elements": [
+    {
+     "cls": 0,
+     "constructed": true,
+     "content": "02010002010102017f020200800201ff0202ff7f0209400000000000000000",
+     "raw": "301f02010002010102017f020200800201ff0202ff7f0209400000000000000000",
+     "tag": 16
+    }
+   ],
+   "ints": [],
+   "rebuild_without": [
+    "301c02010102017f020200800201ff0202ff7f0209400000000000000000",
+    "301c02010002017f020200800201ff0202ff7f0209400000000000000000",
+    "301c020100020101020200800201ff0202ff7f0209400000000000000000",
+    "301b02010002010102017f0201ff0202ff7f0209400000000000000000",
+    "301c02010002010102017f020200800202ff7f0209400000000000000000",
+    "301b02010002010102017f020200800201ff0209400000000000000000",
+    "301402010002010102017f020200800201ff0202ff7f"
+   ],
+   "sub_ints": [
+    0,
+    1,
+    127,
+    128,
+    -1,
+    -129,
+    1180591620717411303424
+   ]
+  },
+  "long_length": {
+   "children": [
+    null
+   ],
+   "data": "04820200000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9fa0a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b7b8b9babbbcbdbebfc0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedfe0e1e2e3e4e5e6e7e8e9eaebecedeeeff0f1f2f3f4f5f6f7f8f9fafbfcfdfeff000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9fa0a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b7b8b9babbbcbdbebfc0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedfe0e1e2e3e4e5e6e7e8e9eaebecedeeeff0f1f2f3f4f5f6f7f8f9fafbfcfdfeff",
+   "elements": [
+    {
+     "cls": 0,
+     "constructed": false,
+     "content": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9fa0a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b7b8b9babbbcbdbebfc0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedfe0e1e2e3e4e5e6e7e8e9eaebecedeeeff0f1f2f3f4f5f6f7f8f9fafbfcfdfeff000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9fa0a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b7b8b9babbbcbdbebfc0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedfe0e1e2e3e4e5e6e7e8e9eaebecedeeeff0f1f2f3f4f5f6f7f8f9fafbfcfdfeff",
+     "raw": "04820200000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9fa0a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b7b8b9babbbcbdbebfc0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedfe0e1e2e3e4e5e6e7e8e9eaebecedeeeff0f1f2f3f4f5f6f7f8f9fafbfcfdfeff000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9fa0a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b7b8b9babbbcbdbebfc0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedfe0e1e2e3e4e5e6e7e8e9eaebecedeeeff0f1f2f3f4f5f6f7f8f9fafbfcfdfeff",
+     "tag": 4
+    }
+   ],
+   "ints": []
+  },
+  "nested_context": {
+   "children": [
+    [
+     {
+      "cls": 0,
+      "constructed": true,
+      "content": "a00604046d65746104036d6163a206040401020304",
+      "raw": "3015a00604046d65746104036d6163a206040401020304",
+      "tag": 16
+     }
+    ]
+   ],
+   "data": "61173015a00604046d65746104036d6163a206040401020304",
+   "elements": [
+    {
+     "cls": 64,
+     "constructed": true,
+     "content": "3015a00604046d65746104036d6163a206040401020304",
+     "raw": "61173015a00604046d65746104036d6163a206040401020304",
+     "tag": 1
+    }
+   ],
+   "ints": [],
+   "rebuild_without": [
+    "6100"
+   ],
+   "sub_ints": []
+  },
+  "set_of_two": {
+   "children": [
+    [
+     {
+      "cls": 0,
+      "constructed": false,
+      "content": "62",
+      "raw": "040162",
+      "tag": 4
+     },
+     {
+      "cls": 0,
+      "constructed": false,
+      "content": "61",
+      "raw": "040161",
+      "tag": 4
+     }
+    ]
+   ],
+   "data": "3106040162040161",
+   "elements": [
+    {
+     "cls": 0,
+     "constructed": true,
+     "content": "040162040161",
+     "raw": "3106040162040161",
+     "tag": 17
+    }
+   ],
+   "ints": [],
+   "rebuild_without": [
+    "3103040161",
+    "3103040162"
+   ],
+   "sub_ints": []
+  },
+  "utf8": {
+   "children": [
+    null
+   ],
+   "data": "0c0b426561636f6e53746f7265",
+   "elements": [
+    {
+     "cls": 0,
+     "constructed": false,
+     "content": "426561636f6e53746f7265",
+     "raw": "0c0b426561636f6e53746f7265",
+     "tag": 12
+    }
+   ],
+   "ints": []
+  }
+ }
+}

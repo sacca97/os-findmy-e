@@ -1,0 +1,397 @@
+// Cuttlefish, the server side of Apple's keychain trust-circle protocol.
+//
+// Authored from a protocol specification, not from any existing implementation; see
+// cloudkit.proto for the provenance note. Cuttlefish is not a REST service -- it is
+// invoked as a server-side function through a CloudKit container, so these messages
+// travel inside FunctionInvokeRequest.parameters and FunctionInvokeResponse
+// .serializedResult rather than on the wire by themselves.
+//
+// Several field numberings below look like off-by-one bugs and are not. They are marked
+// where they occur. Do not "fix" them.
+//
+// ---------------------------------------------------------------------------
+// One message is deliberately absent: CuttlefishEstablishRequest.
+//
+// `establish` forms a NEW trust circle; `joinWithVoucher` joins an existing one. They
+// differ by one branch and are catastrophically different -- an implementation that falls
+// back from the second to the first on error silently destroys the user's existing trust
+// circle, and with it every device's access to their keychain. They even carry the same
+// four members in a different order (peer 1, bottle 2, keys 3, shares 4, against the join
+// request's restorePoint 1, peer 2, bottle 3, shares 4, keys 5), so a mistake would
+// serialise cleanly and mean something else entirely.
+//
+// This project has no reason ever to call it. Leaving the message undefined means no code
+// here can construct one, which is a stronger guarantee than a comment saying not to.
+// ---------------------------------------------------------------------------
+
+syntax = "proto2";
+
+package findmy.cuttlefish;
+
+option java_package = "com.sacca.openfinder.apple.proto.cuttlefish";
+option java_multiple_files = true;
+option optimize_for = LITE_RUNTIME;
+
+// ---------------------------------------------------------------------------
+// Listing what can be recovered from (§2.3)
+// ---------------------------------------------------------------------------
+
+message FetchViableBottlesRequest {
+  optional uint32 filter = 1;
+  optional bytes metrics = 2;
+}
+
+message FetchViableBottlesResponse {
+  repeated EscrowData valid = 1;
+
+  // Field 2 is a legacy repeat of the same type and is deliberately not modelled.
+
+  // Bottles that exist but are not fully usable. EscrowMeta is an empty message in every
+  // schema examined, so an entry here conveys only that such a bottle exists.
+  repeated EscrowMeta partial = 3;
+}
+
+message EscrowData {
+  // The join key: this matches an escrow record's `label` from the escrow proxy. Neither
+  // service alone answers "what can I recover from" -- the proxy knows the human-readable
+  // metadata, Cuttlefish knows which bottles are actually usable.
+  optional string id = 1;
+
+  optional Bottle bottle = 2;
+
+  // Field 3 is skipped by the protocol, not by this file.
+
+  optional EscrowMeta meta = 4;
+}
+
+message EscrowMeta {}
+
+// ---------------------------------------------------------------------------
+// The peer directory (§5.3)
+//
+// An incremental feed of who is in the circle. It is what share signatures and a bottle's
+// sponsor signature are verified against, which is why a recovery sequence begins by
+// syncing trust: to populate this before anything needs to check against it.
+// ---------------------------------------------------------------------------
+
+message FetchChangesRequest {
+  // Omit on a first call. Keeping the token the response returns is what makes this a
+  // feed rather than a re-read of the whole circle every run -- and it is the same value
+  // a join sends back as `restore_point`, which is why it is a string rather than bytes.
+  optional string sync_token = 1;
+}
+
+message FetchChangesResponse {
+  // The changes are nested one level down rather than listed here. Flattening this --
+  // `repeated CuttlefishChange changes = 1` -- parses without error and yields one change
+  // per response with no `add` in it, so the circle reads as empty. Nothing reports a
+  // problem; every share downstream simply ends up with a sender nothing can identify.
+  optional CuttlefishChanges changes = 1;
+}
+
+// What every call that reports trust changes returns: fetchChanges, joinWithVoucher and
+// updateTrust alike. One message, one code path, one place that applies changes.
+message CuttlefishChanges {
+  optional string sync_token = 1;
+  repeated CuttlefishChange changes = 2;
+}
+
+message CuttlefishChange {
+  // Other kinds of change exist at other numbers. A peer arrives at 3, and only that
+  // builds the directory; anything else is skipped rather than treated as an error.
+  optional CuttlefishPeer add = 3;
+}
+
+// ---------------------------------------------------------------------------
+// Key shares (§6.7.0)
+//
+// A share is wrapped to the RECEIVING peer's encryption key. Escrow recovery yields
+// exactly that key for the recovered peer, so the shares it can receive are shares a
+// client holding its bottle can unwrap -- with no membership of the circle required, and
+// therefore nothing written to the account.
+// ---------------------------------------------------------------------------
+
+message FetchRecoverableTlkSharesRequest {
+  optional string for_peer = 1;
+}
+
+// The entries are held as opaque bytes rather than as a modelled message.
+//
+// The specification says each carries "a share record and optionally a set of view keys"
+// without giving their tags, and a length-delimited field declared as the wrong message
+// type does not degrade -- it raises and takes the whole response with it. Bytes accepts
+// whatever arrives and lets a reader that can see the payload decide, which is the same
+// reasoning the name wrappers in cloudkit.proto are declared that way for.
+message FetchRecoverableTlkSharesResponse {
+  repeated bytes shares = 1;
+}
+
+// One entry of a share listing: a keychain view, its keys, and the share handing them
+// out. **[observed]** 22 entries on one account, one per view, `Manatee` and
+// `ProtectedCloudStorage` among them -- the two Stage 5 needs.
+//
+// Note where the view name lives: on **this message**, at field 1. It is not on the
+// record inside, which has no service and no key id at all.
+message RecoverableTlkShare {
+  optional string service = 1;
+  optional ViewKeySet viewkeys = 2;
+  optional RecordWrapper share = 3;
+}
+
+// The three keys of a view, each wrapped the same way as the share.
+//
+// ASSUMED field numbers: the specification names the three members without giving tags.
+// Getting one wrong yields no key rather than an error, so this degrades quietly -- which
+// is why `read_view_keys` reports how many it found.
+message ViewKeySet {
+  optional RecordWrapper tlk = 1;
+  optional RecordWrapper class_a = 2;
+  optional RecordWrapper class_b = 3;
+}
+
+// What a decrypted key share expands to. Field 4 is the view's top-level key itself --
+// symmetric material, not a container holding a key and not an EC private key.
+// `key` is the one `bytes` field, against the pattern of §6.9 where binary-looking values
+// are declared `string`. A writer should not need these declarations at all: a share is
+// re-created by passing this message's serialised bytes through untouched, because
+// re-encoding changes the bytes the receiver's key is bound to even when every field is
+// identical.
+message TlkKeyMaterial {
+  optional string uuid = 1;
+  optional string zone_name = 2;
+  optional string key_class = 3;
+  optional bytes key = 4;
+}
+
+// What both a share and a view key arrive in.
+//
+// The payload is a **CloudKit Record** -- the same message Stage 4 fetches accessory
+// records as, of type `tlkshare` or `synckey`, with its values in named fields rather
+// than numbered ones. That is why reading it as a purpose-built message finds nothing:
+// protobuf skips numbers it does not recognise, and there was nothing at those numbers.
+message RecordWrapper {
+  optional bytes record = 2;
+}
+
+// ---------------------------------------------------------------------------
+// Joining the circle (§6.9)
+// ---------------------------------------------------------------------------
+
+message CuttlefishJoinWithVoucherRequest {
+  optional string restore_point = 1;
+  optional CuttlefishPeer peer = 2;
+  optional Bottle bottle = 3;
+  repeated TlkShare shares = 4;
+
+  // Sent when *establishing* keys rather than receiving them, so this project sends none.
+  repeated ViewKeys keys = 5;
+}
+
+message CuttlefishJoinWithVoucherResponse {
+  // The same changes fetchChanges returns, so a join's result goes through the path that
+  // already exists: apply them to the directory and keep the token.
+  optional CuttlefishChanges changes = 1;
+}
+
+// Handing view keys to a peer that is already in the circle. Not what a join uses -- a
+// join carries its own shares -- but it is how a member stays current across key
+// rotation, which is the reason for joining in the first place.
+message CuttlefishUpdateTrustRequest {
+  optional string restore_point = 1;
+  optional string peer_id = 2;
+  optional SignedInfo stable_info = 3;
+  optional SignedInfo dynamic_info = 4;
+  repeated TlkShare tlkshares = 5;
+  repeated ViewKeys view_keys = 6;
+}
+
+message CuttlefishUpdateTrustResponse {
+  optional CuttlefishChanges changes = 1;
+}
+
+// A peer: an identity in the trust circle. Everything but the hash is a signed blob.
+message CuttlefishPeer {
+  optional string hash = 1;
+  optional SignedInfo permanent_info = 2;
+  optional SignedInfo stable_info = 3;
+  optional SignedInfo dynamic_info = 4;
+  optional SignedInfo voucher = 5;
+}
+
+// The wrapper that makes the whole trust model work.
+//
+// The signature covers the SERIALISED BYTES in `info`, not the message they parse to. A
+// client must therefore keep the exact bytes it signed and send those: protobuf offers no
+// guarantee that re-encoding a parsed message reproduces its input, so re-serialising
+// before sending can invalidate a signature over content that has not changed. See
+// `SignedBlob` in findmy/keychain/join.py, which exists to make that impossible to get
+// wrong by accident.
+message SignedInfo {
+  optional bytes info = 1;
+  optional bytes signature = 2;
+}
+
+// Inside permanent_info.info.
+message PeerPermanentInfo {
+  optional uint64 epoch = 1;
+  optional bytes signing_key = 2;
+  optional bytes encryption_key = 3;
+  optional string machine_id = 4;
+  optional string model_id = 5;
+  optional uint64 creation_time = 6;
+}
+
+// Inside stable_info.info. Note there is no field 17.
+//
+// `device_name` and `serial_number` are how this peer appears to the user, so the
+// labelling rules that govern the device registration govern them too: an entry
+// indistinguishable from real hardware is one the user dare not remove.
+message PeerStableInfo {
+  optional uint64 clock = 1;
+  optional uint64 frozen_policy_version = 2;
+  optional bytes frozen_policy_hash = 3;
+  repeated bytes secrets = 4;
+  optional string os_version = 5;
+  optional string device_name = 6;
+  optional bytes recovery_signing_public_key = 7;
+  optional bytes recovery_encryption_public_key = 8;
+  optional string serial_number = 9;
+  optional uint64 flexible_policy_version = 10;
+  optional bytes flexible_policy_hash = 11;
+  optional uint64 user_controllable_view_status = 12;
+  repeated bytes custodian_recovery_keys = 13;
+  optional bytes secure_element_identity = 14;
+  optional uint64 walrus = 15;
+  optional uint64 web_access = 16;
+  optional bool is_inherited_account = 18;
+}
+
+// Inside dynamic_info.info: the actual statement of who trusts whom.
+message PeerDynamicInfo {
+  optional uint64 clock = 1;
+  repeated string includeds = 2;
+  repeated string excludeds = 3;
+  repeated PeerDisposition dispositions = 4;
+  repeated string preapprovals = 5;
+}
+
+message PeerDisposition {}
+
+// Inside voucher.info.
+//
+// Three fields, and this is the entire mechanism by which a device joins the circle
+// protecting every password the user has. All of the weight is on the signature of the
+// enclosing SignedInfo, made with the sponsoring peer's signing key.
+message Voucher {
+  optional uint32 reason = 1;
+  optional string beneficiary = 2;
+  optional string sponsor = 3;
+}
+
+// The escrow record created for a new identity. Field 1 is absent.
+message Bottle {
+  optional bytes bottle = 2;  // a serialised OTBottle
+  optional bytes escrowed_signing_key = 3;
+  optional bytes escrowed_key_signature = 4;
+  optional bytes peer_key_signature = 5;
+  optional string peer_id = 6;
+  optional string bottle_id = 7;
+}
+
+message OTBottle {
+  optional string peer_id = 1;
+  optional string bottle_id = 2;
+
+  // Reserved by the protocol, not merely unused here.
+  reserved 3, 4, 5, 6, 7;
+
+  optional bytes escrowed_signing_key = 8;
+  optional bytes escrowed_encryption_key = 9;
+  optional bytes peer_signing_key = 10;
+  optional bytes peer_encryption_key = 11;
+  optional OTAuthenticatedCiphertext ciphertext = 12;
+}
+
+// The tag is carried separately from the ciphertext, so it must be appended before
+// decryption or supplied to a detached-tag interface.
+message OTAuthenticatedCiphertext {
+  optional bytes ciphertext = 1;
+  optional bytes authentication_code = 2;
+  optional bytes initialization_vector = 3;
+}
+
+// What opening a bottle yields. Both fields are at surprising numbers: there is no field
+// 1 and no field 2.
+message OTInternalBottle {
+  optional OTPrivateKey signing_key = 3;
+  optional OTPrivateKey encryption_key = 4;
+}
+
+message OTPrivateKey {
+  optional uint32 key_type = 1;
+  optional bytes key_data = 2;
+}
+
+// One per view key handed to a new peer.
+//
+// Note the types: wrapped keys, signatures and public encryption keys are declared
+// `string`, not `bytes`, despite plainly being binary. Whatever the encoding turns out to
+// be, the wire type is a string, and declaring them as bytes would be a different
+// message.
+message TlkShare {
+  optional string service = 1;
+  optional uint64 curve = 2;
+  optional uint64 epoch = 3;
+  optional string key_id = 4;
+  optional uint32 poisoned = 5;
+  optional string receiver = 6;
+  optional string receiver_public_encryption_key = 7;
+  optional string sender = 8;
+  optional string signature = 9;
+  optional uint32 version = 10;
+  optional string wrapped_key = 11;
+}
+
+message ViewKeys {
+  optional string service = 1;
+  optional ViewKey top_level_key = 2;
+  optional ViewKey class_a = 3;
+  optional ViewKey class_c = 4;
+  optional ViewKey old_top_level_key = 5;
+}
+
+// Note that `key` is a `string`, following the pattern of TlkShare rather than that of
+// TlkKeyMaterial a few messages up -- and that **nothing in this project writes one**, so
+// unlike every other message here this has never been exercised in the direction that
+// would check it. A transcription no writer has constructed is weaker than one that has.
+message ViewKey {
+  optional string key_id = 1;
+  optional string top_level_key_id = 2;
+  optional uint32 key_number = 3;
+  optional string key = 4;
+
+  // Spelled as Apple spells it: `harware`, missing its `d`. Misspelled in every schema
+  // examined, and that spelling is the wire format -- correcting it here would name a
+  // field nothing on the other side is looking for.
+  optional string harware = 5;
+}
+
+// The payload of a v2 PCS private key structure: Stage 5 SS3.2's
+// `PrivateKey ::= CHOICE { v2 [APPLICATION 5] EXPLICIT SEQUENCE { data OCTET STRING } }`,
+// where that OCTET STRING is this message.
+//
+// ASSUMED field numbers. The specification names the two members and their order but not
+// their tags, so `service_keys_from_der` reads them positionally and reports what it saw
+// rather than relying on these.
+message PcsServiceKeys {
+  optional PcsPrivateKey encryption_key = 1;
+  optional PcsPrivateKey signing_key = 2;
+}
+
+message PcsPrivateKey {
+  // The private scalar, compressed -- 32 bytes for P-256.
+  optional bytes key = 1;
+
+  // The matching PublicKey structure of Stage 5 SS3.2, DER-encoded. Optional.
+  optional bytes public_structure = 2;
+}

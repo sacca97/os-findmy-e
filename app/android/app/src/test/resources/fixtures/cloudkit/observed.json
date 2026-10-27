@@ -1,0 +1,51 @@
+{
+ "_about": "Reply SHAPES recorded as [observed] (seen in real Apple replies) by the fork's author: opentagviewer/docs/findmy-export/04-cloudkit.md and the comments in github.com/parawanderer/FindMy.py tests/ and findmy/cloudkit/proto/cloudkit.proto. Every VALUE here is synthetic (no real id, token, key or URL of anyone's account); only the shape (which keys/fields arrive, their types, what co-occurs) is observed. They show what the fork saw, not that Apple still answers this way.",
+ "ck_app_init": {
+  "_source": "04-cloudkit.md section 2.3 [observed]: eleven keys; cloudKitUserId is 33 characters; each service twice (plain p<N>- partition host, and the gateway form); metrics unpartitioned; 'values' present. The gateway URLs below are rewritten to the test server by the test.",
+  "body": {
+   "cloudKitUserId": "_00000000000000000000000000000000",
+   "cloudKitDatabaseUrl": "https://p77-ckdatabase.icloud.com:443",
+   "cloudKitDatabaseGatewayUrl": "https://gateway.icloud.com/ckdatabase",
+   "cloudKitShareUrl": "https://p77-ckshare.icloud.com:443",
+   "cloudKitShareGatewayUrl": "https://gateway.icloud.com/ckshare",
+   "cloudKitDeviceUrl": "https://p77-ckdevice.icloud.com:443",
+   "cloudKitDeviceGatewayUrl": "https://gateway.icloud.com/ckdevice",
+   "cloudKitCodeUrl": "https://p77-ckcode.icloud.com:443",
+   "cloudKitCodeGatewayUrl": "https://gateway.icloud.com/ckcoderouter",
+   "cloudKitMetricsUrl": "https://metrics.icloud.com",
+   "values": []
+  },
+  "partition": "77"
+ },
+ "zone_retrieve": {
+  "_source": "04-cloudkit.md section 3.2.3 [observed]: two zones; BeaconStore has protectionInfo, no recordProtectionInfo, deviceCount 10 and a continuation token; _defaultZone has none of them.",
+  "zones": [
+   {"name": "BeaconStore", "protection_info": true, "record_protection_info": false, "device_count": 10, "continuation_token": true},
+   {"name": "_defaultZone", "protection_info": false, "record_protection_info": false, "device_count": null, "continuation_token": false}
+  ]
+ },
+ "record_sync": {
+  "_source": "04-cloudkit.md section 3.5 [observed]: fields 4 (status) and 12 (zoneAttributesChanges, ~900 bytes, first page only) arrive in practice; status 3 = fully synced and can arrive on a page that still carries changes. proto comment: fields 3..8 and 12 'arrive on every page'.",
+  "first_page_status": 3,
+  "zone_attributes_changes_length": 900,
+  "changes_on_final_page": 3
+ },
+ "record_fields": {
+  "_source": "04-cloudkit.md section 3.6 [observed]: every BeaconStore field had is_encrypted set while declaring the plaintext type: 3, 7, 2, 8, 15, 20.",
+  "types": [3, 7, 2, 8, 15, 20]
+ },
+ "bad_syntax": {
+  "_source": "04-cloudkit.md section 3.3 [observed]: omitting deviceHardwareID is rejected with a FAILURE result, client error BAD_SYNTAX (4), an errorDescription naming the field and an eight-character errorKey.",
+  "result_code": 3,
+  "client_error": 4,
+  "error_description": "deviceHardwareID is required field",
+  "error_key": "ABCD1234"
+ },
+ "empty_500": {
+  "_source": "04-cloudkit.md section 3.2 [observed]: a request that does not parse (e.g. Operation.type at field 1) is answered HTTP 500 with an empty body."
+ },
+ "error_wrappers": {
+  "_source": "04-cloudkit.md section 3.2.2 [observed]: clientError/serverError are wrapper messages (field 1 holds the code); declaring them as ints fails with 'invalid wire type'. Encoded here: Result{code 3, error{clientError{code 6}, retryAfterSeconds 30}}.",
+  "result_hex": "080312060a020806181e"
+ }
+}

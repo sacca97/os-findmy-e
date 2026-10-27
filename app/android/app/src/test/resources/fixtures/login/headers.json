@@ -1,0 +1,124 @@
+{
+ "accountsd_client_info": "<MacBookPro13,2> <macOS;13.1;22C65> <com.apple.AOSKit/282 (com.apple.accountsd/113)>",
+ "akd_user_agent": "akd/1.0 CFNetwork/1404.0.5 Darwin/22.2.0",
+ "client_akd": "<MacBookPro13,2> <macOS;13.1;22C65> <com.apple.AuthKit/1 (com.apple.akd/1.0)>",
+ "client_xcode": "<MacBookPro13,2> <macOS;13.1;22C65> <com.apple.AOSKit/282 (com.apple.dt.Xcode/3594.4.19)>",
+ "devid": "00006000-0A1B2C3D4E5F6071",
+ "fixed": {
+  "locale": "en_US",
+  "mid": "ZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXp7fH1+f4CBgoOEhYaHiImKi4yNjo+QkZKTlJWWl5iZmpucnZ6f",
+  "otp": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGw==",
+  "routing": "84215045",
+  "time": "2026-10-17T12:34:56Z",
+  "tz": "UTC"
+ },
+ "get_cpd": {
+  "X-Apple-I-Client-Time": "2026-10-17T12:34:56Z",
+  "X-Apple-I-MD": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGw==",
+  "X-Apple-I-MD-LU": "OEYyQzZBMUU1QjdENDlDM0EwRTFGMkQzQzRCNUE2OTc=",
+  "X-Apple-I-MD-M": "ZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXp7fH1+f4CBgoOEhYaHiImKi4yNjo+QkZKTlJWWl5iZmpucnZ6f",
+  "X-Apple-I-MD-RINFO": "84215045",
+  "X-Apple-I-SRL-NO": "C02SYNTH0001",
+  "X-Apple-I-TimeZone": "UTC",
+  "X-Apple-Locale": "en_US",
+  "X-Mme-Device-Id": "00006000-0A1B2C3D4E5F6071",
+  "bootstrap": true,
+  "icscrec": true,
+  "loc": "en_US",
+  "pbe": false,
+  "prkgen": true,
+  "svct": "iCloud"
+ },
+ "get_headers": {
+  "X-Apple-I-Client-Time": "2026-10-17T12:34:56Z",
+  "X-Apple-I-MD": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGw==",
+  "X-Apple-I-MD-LU": "OEYyQzZBMUU1QjdENDlDM0EwRTFGMkQzQzRCNUE2OTc=",
+  "X-Apple-I-MD-M": "ZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXp7fH1+f4CBgoOEhYaHiImKi4yNjo+QkZKTlJWWl5iZmpucnZ6f",
+  "X-Apple-I-MD-RINFO": "84215045",
+  "X-Apple-I-SRL-NO": "C02SYNTH0001",
+  "X-Apple-I-TimeZone": "UTC",
+  "X-Apple-Locale": "en_US",
+  "X-Mme-Device-Id": "00006000-0A1B2C3D4E5F6071",
+  "loc": "en_US"
+ },
+ "get_headers_with_client_info": {
+  "X-Apple-App-Info": "com.apple.gs.xcode.auth",
+  "X-Apple-I-Client-Time": "2026-10-17T12:34:56Z",
+  "X-Apple-I-MD": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGw==",
+  "X-Apple-I-MD-LU": "OEYyQzZBMUU1QjdENDlDM0EwRTFGMkQzQzRCNUE2OTc=",
+  "X-Apple-I-MD-M": "ZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXp7fH1+f4CBgoOEhYaHiImKi4yNjo+QkZKTlJWWl5iZmpucnZ6f",
+  "X-Apple-I-MD-RINFO": "84215045",
+  "X-Apple-I-SRL-NO": "C02SYNTH0001",
+  "X-Apple-I-TimeZone": "UTC",
+  "X-Apple-Locale": "en_US",
+  "X-Mme-Client-Info": "<MacBookPro13,2> <macOS;13.1;22C65> <com.apple.AOSKit/282 (com.apple.dt.Xcode/3594.4.19)>",
+  "X-Mme-Device-Id": "00006000-0A1B2C3D4E5F6071",
+  "X-Xcode-Version": "11.2 (11B41)",
+  "loc": "en_US"
+ },
+ "gsa_user_agent": "akd/1.0 CFNetwork/978.0.7 Darwin/18.7.0",
+ "icloud_helper_user_agent": "com.apple.iCloudHelper/282 CFNetwork/1404.0.5 Darwin/22.2.0",
+ "identity": {
+  "cfnetwork": "1404.0.5",
+  "darwin": "22.2.0",
+  "model": "MacBookPro13,2",
+  "os_build": "22C65",
+  "os_name": "macOS",
+  "os_version": "13.1"
+ },
+ "identity_token": {
+  "adsid": "000123-05-synthetic",
+  "idms_token": "SYNTH-IDMS",
+  "value": "MDAwMTIzLTA1LXN5bnRoZXRpYzpTWU5USC1JRE1T"
+ },
+ "phones": [
+  {
+   "html": "<!DOCTYPE html><html><head><title>Verify</title><script type=\"application/json\" class=\"boot_args\">{\"direct\":{\"phoneNumberVerification\":{\"trustedPhoneNumbers\":[{\"id\":1,\"numberWithDialCode\":\"+1 (•••) •••-••12\",\"pushMode\":\"sms\",\"lastTwoDigits\":\"12\"},{\"id\":2,\"numberWithDialCode\":\"+39 ••• ••• ••34\"},{\"numberWithDialCode\":null}]}}}</script></head><body></body></html>",
+   "name": "boot_args",
+   "numbers": [
+    {
+     "id": 1,
+     "lastTwoDigits": "12",
+     "numberWithDialCode": "+1 (•••) •••-••12",
+     "pushMode": "sms"
+    },
+    {
+     "id": 2,
+     "numberWithDialCode": "+39 ••• ••• ••34"
+    },
+    {
+     "numberWithDialCode": null
+    }
+   ]
+  },
+  {
+   "html": "<!DOCTYPE html><html><head><title>Verify</title><script type=\"application/json\" class=\"x boot_args y\">{\"direct\":{\"phoneNumberVerification\":{\"trustedPhoneNumbers\":[{\"id\":1,\"numberWithDialCode\":\"+1 (•••) •••-••12\",\"pushMode\":\"sms\",\"lastTwoDigits\":\"12\"},{\"id\":2,\"numberWithDialCode\":\"+39 ••• ••• ••34\"},{\"numberWithDialCode\":null}]}}}</script></head><body></body></html>",
+   "name": "multi_class",
+   "numbers": [
+    {
+     "id": 1,
+     "lastTwoDigits": "12",
+     "numberWithDialCode": "+1 (•••) •••-••12",
+     "pushMode": "sms"
+    },
+    {
+     "id": 2,
+     "numberWithDialCode": "+39 ••• ••• ••34"
+    },
+    {
+     "numberWithDialCode": null
+    }
+   ]
+  },
+  {
+   "html": "<html><script class=\"boot_args\">{\"other\":1}</script></html>",
+   "name": "empty_direct",
+   "numbers": []
+  }
+ ],
+ "phones_missing_script": "RuntimeError: Could not find HTML element containing phone numbers",
+ "serial": "C02SYNTH0001",
+ "sms_request_body": "{\"phoneNumber\": {\"id\": 2}, \"mode\": \"sms\"}",
+ "sms_submit_body": "{\"phoneNumber\": {\"id\": 2}, \"securityCode\": {\"code\": \"123456\"}, \"mode\": \"sms\"}",
+ "uid": "8F2C6A1E5B7D49C3A0E1F2D3C4B5A697"
+}

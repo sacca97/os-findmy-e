@@ -5,3 +5,19 @@ opentagviewer/
 ext/
 dump-*
 tools/winadi/*.exe
+target/
+
+# app/: Apple's CoreADI file and machine files (credentials) must never be committed
+app/prebuilt/assets/
+app/prebuilt/dev/
+app/prebuilt/java/
+app/prebuilt/jniLibs/
+*.machine.json
+app/**/build/
+app/**/.gradle/
+app/**/local.properties
+app/screenshots/
+.ruff_cache/
+.agents/
+.codex/
+.aws/

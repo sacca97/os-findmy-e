@@ -1,0 +1,92 @@
+{
+ "listed": [
+  {
+   "label": "com.apple.icdp.record.PEER-1",
+   "metadata": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPCFET0NUWVBFIHBsaXN0IFBVQkxJQyAiLS8vQXBwbGUvL0RURCBQTElTVCAxLjAvL0VOIiAiaHR0cDovL3d3dy5hcHBsZS5jb20vRFREcy9Qcm9wZXJ0eUxpc3QtMS4wLmR0ZCI+CjxwbGlzdCB2ZXJzaW9uPSIxLjAiPgo8ZGljdD4KCTxrZXk+Q2xpZW50TWV0YWRhdGE8L2tleT4KCTxkaWN0PgoJCTxrZXk+ZGV2aWNlX21vZGVsPC9rZXk+CgkJPHN0cmluZz5NYWNCb29rUHJvMTgsMzwvc3RyaW5nPgoJCTxrZXk+ZGV2aWNlX21vZGVsX2NsYXNzPC9rZXk+CgkJPHN0cmluZz5NYWNCb29rUHJvPC9zdHJpbmc+CgkJPGtleT5kZXZpY2VfbmFtZTwva2V5PgoJCTxzdHJpbmc+U3ludGhldGljIE1hYzwvc3RyaW5nPgoJPC9kaWN0PgoJPGtleT5ib3R0bGVJRDwva2V5PgoJPHN0cmluZz4wRjFFMkQzQy00QjVBLTY5NzgtODc5Ni1BNUI0QzNEMkUxRjA8L3N0cmluZz4KCTxrZXk+YnVpbGQ8L2tleT4KCTxzdHJpbmc+MjJGODI8L3N0cmluZz4KCTxrZXk+Y29tLmFwcGxlLnNlY3VyZWJhY2t1cC50aW1lc3RhbXA8L2tleT4KCTxkYXRlPjIwMjQtMDMtMDFUMTI6MDA6MDBaPC9kYXRlPgoJPGtleT5zZXJpYWw8L2tleT4KCTxzdHJpbmc+QzAyU1lOVEhFVElDPC9zdHJpbmc+CjwvZGljdD4KPC9wbGlzdD4K"
+  },
+  {
+   "label": "com.apple.icdp.record.PEER-2",
+   "metadata": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPCFET0NUWVBFIHBsaXN0IFBVQkxJQyAiLS8vQXBwbGUvL0RURCBQTElTVCAxLjAvL0VOIiAiaHR0cDovL3d3dy5hcHBsZS5jb20vRFREcy9Qcm9wZXJ0eUxpc3QtMS4wLmR0ZCI+CjxwbGlzdCB2ZXJzaW9uPSIxLjAiPgo8ZGljdD4KCTxrZXk+Q2xpZW50TWV0YWRhdGE8L2tleT4KCTxkaWN0PgoJCTxrZXk+ZGV2aWNlX21vZGVsPC9rZXk+CgkJPHN0cmluZz5NYWNCb29rUHJvMTgsMzwvc3RyaW5nPgoJCTxrZXk+ZGV2aWNlX21vZGVsX2NsYXNzPC9rZXk+CgkJPHN0cmluZz5NYWNCb29rUHJvPC9zdHJpbmc+CgkJPGtleT5kZXZpY2VfbmFtZTwva2V5PgoJCTxzdHJpbmc+U3ludGhldGljIE1hYzwvc3RyaW5nPgoJPC9kaWN0PgoJPGtleT5idWlsZDwva2V5PgoJPHN0cmluZz4yMkY4Mjwvc3RyaW5nPgoJPGtleT5jb20uYXBwbGUuc2VjdXJlYmFja3VwLnRpbWVzdGFtcDwva2V5PgoJPGRhdGU+MjAyNC0wMy0wMVQxMjowMDowMFo8L2RhdGU+Cgk8a2V5PnNlcmlhbDwva2V5PgoJPHN0cmluZz5DMDJTRUNPTkQ8L3N0cmluZz4KPC9kaWN0Pgo8L3BsaXN0Pgo="
+  },
+  {
+   "label": "com.apple.icdp.record.PEER-3.double",
+   "metadata": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPCFET0NUWVBFIHBsaXN0IFBVQkxJQyAiLS8vQXBwbGUvL0RURCBQTElTVCAxLjAvL0VOIiAiaHR0cDovL3d3dy5hcHBsZS5jb20vRFREcy9Qcm9wZXJ0eUxpc3QtMS4wLmR0ZCI+CjxwbGlzdCB2ZXJzaW9uPSIxLjAiPgo8ZGljdD4KCTxrZXk+Q2xpZW50TWV0YWRhdGE8L2tleT4KCTxkaWN0PgoJCTxrZXk+ZGV2aWNlX21vZGVsPC9rZXk+CgkJPHN0cmluZz5NYWNCb29rUHJvMTgsMzwvc3RyaW5nPgoJCTxrZXk+ZGV2aWNlX21vZGVsX2NsYXNzPC9rZXk+CgkJPHN0cmluZz5NYWNCb29rUHJvPC9zdHJpbmc+CgkJPGtleT5kZXZpY2VfbmFtZTwva2V5PgoJCTxzdHJpbmc+U3ludGhldGljIE1hYzwvc3RyaW5nPgoJPC9kaWN0PgoJPGtleT5ib3R0bGVJRDwva2V5PgoJPHN0cmluZz4wRjFFMkQzQy00QjVBLTY5NzgtODc5Ni1BNUI0QzNEMkUxRjA8L3N0cmluZz4KCTxrZXk+YnVpbGQ8L2tleT4KCTxzdHJpbmc+MjJGODI8L3N0cmluZz4KCTxrZXk+Y29tLmFwcGxlLnNlY3VyZWJhY2t1cC50aW1lc3RhbXA8L2tleT4KCTxkYXRlPjIwMjQtMDMtMDFUMTI6MDA6MDBaPC9kYXRlPgoJPGtleT5zZXJpYWw8L2tleT4KCTxzdHJpbmc+QzAyU1lOVEhFVElDPC9zdHJpbmc+CjwvZGljdD4KPC9wbGlzdD4K"
+  }
+ ],
+ "options": {
+  "described_but_not_viable": [
+   {
+    "bottle_id": "0F1E2D3C-4B5A-6978-8796-A5B4C3D2E1F0",
+    "build": "22F82",
+    "companion_of": "com.apple.icdp.record.PEER-3",
+    "device_model": "MacBookPro18,3",
+    "device_name": "Synthetic Mac",
+    "escrowed_at": "2024-03-01T12:00:00+00:00",
+    "is_companion": true,
+    "is_recovery_candidate": true,
+    "label": "com.apple.icdp.record.PEER-3.double",
+    "peer_id": "PEER-3",
+    "serial": "C02SYNTHETIC"
+   }
+  ],
+  "device_count": 1,
+  "recoverable": [
+   {
+    "bottle_id": "0F1E2D3C-4B5A-6978-8796-A5B4C3D2E1F0",
+    "build": "22F82",
+    "companion_of": "com.apple.icdp.record.PEER-1",
+    "device_model": "MacBookPro18,3",
+    "device_name": "Synthetic Mac",
+    "escrowed_at": "2024-03-01T12:00:00+00:00",
+    "is_companion": false,
+    "is_recovery_candidate": true,
+    "label": "com.apple.icdp.record.PEER-1",
+    "peer_id": "PEER-1",
+    "serial": "C02SYNTHETIC"
+   }
+  ],
+  "viability_is_trustworthy": true,
+  "viable_but_undescribed": []
+ },
+ "records": [
+  {
+   "bottle_id": "0F1E2D3C-4B5A-6978-8796-A5B4C3D2E1F0",
+   "build": "22F82",
+   "companion_of": "com.apple.icdp.record.PEER-1",
+   "device_model": "MacBookPro18,3",
+   "device_name": "Synthetic Mac",
+   "escrowed_at": "2024-03-01T12:00:00+00:00",
+   "is_companion": false,
+   "is_recovery_candidate": true,
+   "label": "com.apple.icdp.record.PEER-1",
+   "peer_id": "PEER-1",
+   "serial": "C02SYNTHETIC"
+  },
+  {
+   "bottle_id": null,
+   "build": "22F82",
+   "companion_of": "com.apple.icdp.record.PEER-2",
+   "device_model": "MacBookPro18,3",
+   "device_name": "Synthetic Mac",
+   "escrowed_at": "2024-03-01T12:00:00+00:00",
+   "is_companion": false,
+   "is_recovery_candidate": false,
+   "label": "com.apple.icdp.record.PEER-2",
+   "peer_id": "PEER-2",
+   "serial": "C02SECOND"
+  },
+  {
+   "bottle_id": "0F1E2D3C-4B5A-6978-8796-A5B4C3D2E1F0",
+   "build": "22F82",
+   "companion_of": "com.apple.icdp.record.PEER-3",
+   "device_model": "MacBookPro18,3",
+   "device_name": "Synthetic Mac",
+   "escrowed_at": "2024-03-01T12:00:00+00:00",
+   "is_companion": true,
+   "is_recovery_candidate": true,
+   "label": "com.apple.icdp.record.PEER-3.double",
+   "peer_id": "PEER-3",
+   "serial": "C02SYNTHETIC"
+  }
+ ]
+}

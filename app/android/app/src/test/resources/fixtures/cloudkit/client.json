@@ -1,0 +1,382 @@
+{
+ "account": {
+  "client_info": "<MacBookPro18,3> <Mac OS X;13.4.1;22F82> <com.apple.AuthKit/1 (com.apple.dt.Xcode/3594.4.19)>",
+  "device_uuid": "0f1e2d3c-4b5a-6978-8796-a5b4c3d2e1f0",
+  "dsid": "1234567890",
+  "serial": "C02SYNTHETIC"
+ },
+ "anisette": {
+  "X-Apple-I-MD": "otp-synthetic",
+  "X-Apple-I-MD-M": "machine-synthetic",
+  "X-Mme-Device-Id": "DEVICE-SYNTHETIC"
+ },
+ "delimited": {
+  "bad_message": {
+   "data": "02ffff",
+   "error": "DecodeError"
+  },
+  "empty": {
+   "count": 0,
+   "data": "",
+   "error": null
+  },
+  "truncated_body": {
+   "data": "05616263",
+   "error": "UnhandledProtocolError"
+  },
+  "truncated_varint": {
+   "data": "80",
+   "error": "UnhandledProtocolError"
+  }
+ },
+ "flow": {
+  "changes": [
+   "12026531",
+   "12026532"
+  ],
+  "container": {
+   "code_gateway_url": "https://gateway.icloud.com/ckcoderouter",
+   "database_gateway_url": "https://gateway.icloud.com/ckdatabase",
+   "partition": "42",
+   "user_id": "_0123456789abcdef0123456789abcdef"
+  },
+  "invoke_result": "0a03696e6e6572",
+  "replies": {
+   "app_init": "{\"cloudKitUserId\": \"_0123456789abcdef0123456789abcdef\", \"cloudKitDatabaseUrl\": \"https://p42-ckdatabase.icloud.com:443\", \"cloudKitDatabaseGatewayUrl\": \"https://gateway.icloud.com/ckdatabase\", \"cloudKitShareUrl\": \"https://p42-ckshare.icloud.com:443\", \"cloudKitShareGatewayUrl\": \"https://gateway.icloud.com/ckshare\", \"cloudKitDeviceUrl\": \"https://p42-ckdevice.icloud.com:443\", \"cloudKitDeviceGatewayUrl\": \"https://gateway.icloud.com/ckdevice\", \"cloudKitCodeUrl\": \"https://p42-ckcode.icloud.com:443\", \"cloudKitCodeGatewayUrl\": \"https://gateway.icloud.com/ckcoderouter\", \"cloudKitMetricsUrl\": \"https://metrics.icloud.com\", \"values\": []}",
+   "invoke": "101a020801ea44090a070a03696e6e6572",
+   "page1": "1e1a020801aa0d170a04120265311207746f6b656e2d31200162040a026869",
+   "page2": "181a020802aa0d110a04120265321207746f6b656e2d3220031e1a020801aa0d170a04120265311207746f6b656e2d31200162040a026869",
+   "zone": "441a020801ca0c3d0a250a210a0f0a0d0a0b426561636f6e53746f72651a0e0a02610012087a6f6e652d746167200a0a140a120a100a0e0a0c5f64656661756c745a6f6e65"
+  },
+  "requests": [
+   {
+    "auth": [
+     "1234567890",
+     "SYNTHETIC-MME-TOKEN"
+    ],
+    "body": "",
+    "headers": {
+     "X-Apple-I-MD": "otp-synthetic",
+     "X-Apple-I-MD-M": "machine-synthetic",
+     "X-Mme-Device-Id": "DEVICE-SYNTHETIC",
+     "accept": "application/x-protobuf",
+     "accept-encoding": "gzip",
+     "accept-language": "en-US,en;q=0.9",
+     "cache-control": "no-transform",
+     "user-agent": "CloudKit/1970 (19H384)",
+     "x-apple-c2-metric-triggers": "0",
+     "x-apple-operation-group-id": "00000000000000000000000000000002",
+     "x-apple-operation-id": "00000000000000000000000000000003",
+     "x-apple-request-uuid": "00000000-0000-4000-8000-000000000002",
+     "x-cloudkit-authtoken": "SYNTHETIC-CK-TOKEN",
+     "x-cloudkit-bundleid": "com.apple.icloud.searchpartyd",
+     "x-cloudkit-containerid": "com.apple.icloud.searchparty",
+     "x-cloudkit-databasescope": "PRIVATE",
+     "x-cloudkit-duetpreclearedmode": "None",
+     "x-cloudkit-environment": "Production",
+     "x-mme-client-info": "<MacBookPro18,3> <Mac OS X;13.4.1;22F82> <com.apple.cloudkit.CloudKitDaemon/1970 (com.apple.cloudd/1970)>"
+    },
+    "url": "https://gateway.icloud.com/setup/setup/ck/v1/ckAppInit?container=com.apple.icloud.searchparty"
+   },
+   {
+    "auth": null,
+    "body": "d6020aa102121c636f6d2e6170706c652e69636c6f75642e73656172636870617274791a1d636f6d2e6170706c652e69636c6f75642e7365617263687061727479643a280a2430463145324433432d344235412d363937382d383739362d4135423443334432453146301002420631332e342e314a0e4d6163426f6f6b50726f31382c335221636f6d2e6170706c652e636c6f75646b69742e436c6f75644b69744461656d6f6e5a0431393730920103352e30980101aa010946696e644d792e7079b201203046314532443343344235413639373838373936413542344333443245314630b80101c80101d201203030303030303030303030303030303030303030303030303030303030303031e801008a020c43303253594e544845544943900200980201122d0a2430303030303030302d303030302d343030302d383030302d30303030303030303030303110c90118002001ca0c00",
+    "headers": {
+     "X-Apple-I-MD": "otp-synthetic",
+     "X-Apple-I-MD-M": "machine-synthetic",
+     "X-Mme-Device-Id": "DEVICE-SYNTHETIC",
+     "accept": "application/x-protobuf",
+     "accept-encoding": "gzip",
+     "accept-language": "en-US,en;q=0.9",
+     "cache-control": "no-transform",
+     "content-encoding": "gzip",
+     "content-type": "application/x-protobuf; desc=\"https://gateway.icloud.com:443/static/protobuf/CloudDB/CloudDBClient.desc\"; messageType=RequestOperation; delimited=true",
+     "user-agent": "CloudKit/1970 (19H384)",
+     "x-apple-c2-metric-triggers": "0",
+     "x-apple-operation-group-id": "00000000000000000000000000000004",
+     "x-apple-operation-id": "00000000000000000000000000000005",
+     "x-apple-request-uuid": "00000000-0000-4000-8000-000000000003",
+     "x-cloudkit-authtoken": "SYNTHETIC-CK-TOKEN",
+     "x-cloudkit-bundleid": "com.apple.icloud.searchpartyd",
+     "x-cloudkit-containerid": "com.apple.icloud.searchparty",
+     "x-cloudkit-databasescope": "PRIVATE",
+     "x-cloudkit-duetpreclearedmode": "None",
+     "x-cloudkit-environment": "Production",
+     "x-cloudkit-userid": "_0123456789abcdef0123456789abcdef",
+     "x-mme-client-info": "<MacBookPro18,3> <Mac OS X;13.4.1;22F82> <com.apple.cloudkit.CloudKitDaemon/1970 (com.apple.cloudd/1970)>"
+    },
+    "url": "https://gateway.icloud.com/ckdatabase/api/client/zone/retrieve"
+   },
+   {
+    "auth": null,
+    "body": "92030aa102121c636f6d2e6170706c652e69636c6f75642e73656172636870617274791a1d636f6d2e6170706c652e69636c6f75642e7365617263687061727479643a280a2430463145324433432d344235412d363937382d383739362d4135423443334432453146301002420631332e342e314a0e4d6163426f6f6b50726f31382c335221636f6d2e6170706c652e636c6f75646b69742e436c6f75644b69744461656d6f6e5a0431393730920103352e30980101aa010946696e644d792e7079b201203046314532443343344235413639373838373936413542344333443245314630b80101c80101d201203030303030303030303030303030303030303030303030303030303030303036e801008a020c43303253594e544845544943900200980201122d0a2430303030303030302d303030302d343030302d383030302d30303030303030303030303410d50118002001aa0d3c123a0a0f0a0b426561636f6e53746f7265100612250a215f303132333435363738396162636465663031323334353637383961626364656610071801",
+    "headers": {
+     "X-Apple-I-MD": "otp-synthetic",
+     "X-Apple-I-MD-M": "machine-synthetic",
+     "X-Mme-Device-Id": "DEVICE-SYNTHETIC",
+     "accept": "application/x-protobuf",
+     "accept-encoding": "gzip",
+     "accept-language": "en-US,en;q=0.9",
+     "cache-control": "no-transform",
+     "content-encoding": "gzip",
+     "content-type": "application/x-protobuf; desc=\"https://gateway.icloud.com:443/static/protobuf/CloudDB/CloudDBClient.desc\"; messageType=RequestOperation; delimited=true",
+     "user-agent": "CloudKit/1970 (19H384)",
+     "x-apple-c2-metric-triggers": "0",
+     "x-apple-operation-group-id": "00000000000000000000000000000007",
+     "x-apple-operation-id": "00000000000000000000000000000008",
+     "x-apple-request-uuid": "00000000-0000-4000-8000-000000000005",
+     "x-cloudkit-authtoken": "SYNTHETIC-CK-TOKEN",
+     "x-cloudkit-bundleid": "com.apple.icloud.searchpartyd",
+     "x-cloudkit-containerid": "com.apple.icloud.searchparty",
+     "x-cloudkit-databasescope": "PRIVATE",
+     "x-cloudkit-duetpreclearedmode": "None",
+     "x-cloudkit-environment": "Production",
+     "x-cloudkit-userid": "_0123456789abcdef0123456789abcdef",
+     "x-mme-client-info": "<MacBookPro18,3> <Mac OS X;13.4.1;22F82> <com.apple.cloudkit.CloudKitDaemon/1970 (com.apple.cloudd/1970)>"
+    },
+    "url": "https://gateway.icloud.com/ckdatabase/api/client/record/sync"
+   },
+   {
+    "auth": null,
+    "body": "9b030aa102121c636f6d2e6170706c652e69636c6f75642e73656172636870617274791a1d636f6d2e6170706c652e69636c6f75642e7365617263687061727479643a280a2430463145324433432d344235412d363937382d383739362d4135423443334432453146301002420631332e342e314a0e4d6163426f6f6b50726f31382c335221636f6d2e6170706c652e636c6f75646b69742e436c6f75644b69744461656d6f6e5a0431393730920103352e30980101aa010946696e644d792e7079b201203046314532443343344235413639373838373936413542344333443245314630b80101c80101d201203030303030303030303030303030303030303030303030303030303030303039e801008a020c43303253594e544845544943900200980201122d0a2430303030303030302d303030302d343030302d383030302d30303030303030303030303610d50118002001aa0d450a07746f6b656e2d31123a0a0f0a0b426561636f6e53746f7265100612250a215f303132333435363738396162636465663031323334353637383961626364656610071801",
+    "headers": {
+     "X-Apple-I-MD": "otp-synthetic",
+     "X-Apple-I-MD-M": "machine-synthetic",
+     "X-Mme-Device-Id": "DEVICE-SYNTHETIC",
+     "accept": "application/x-protobuf",
+     "accept-encoding": "gzip",
+     "accept-language": "en-US,en;q=0.9",
+     "cache-control": "no-transform",
+     "content-encoding": "gzip",
+     "content-type": "application/x-protobuf; desc=\"https://gateway.icloud.com:443/static/protobuf/CloudDB/CloudDBClient.desc\"; messageType=RequestOperation; delimited=true",
+     "user-agent": "CloudKit/1970 (19H384)",
+     "x-apple-c2-metric-triggers": "0",
+     "x-apple-operation-group-id": "0000000000000000000000000000000A",
+     "x-apple-operation-id": "0000000000000000000000000000000B",
+     "x-apple-request-uuid": "00000000-0000-4000-8000-000000000007",
+     "x-cloudkit-authtoken": "SYNTHETIC-CK-TOKEN",
+     "x-cloudkit-bundleid": "com.apple.icloud.searchpartyd",
+     "x-cloudkit-containerid": "com.apple.icloud.searchparty",
+     "x-cloudkit-databasescope": "PRIVATE",
+     "x-cloudkit-duetpreclearedmode": "None",
+     "x-cloudkit-environment": "Production",
+     "x-cloudkit-userid": "_0123456789abcdef0123456789abcdef",
+     "x-mme-client-info": "<MacBookPro18,3> <Mac OS X;13.4.1;22F82> <com.apple.cloudkit.CloudKitDaemon/1970 (com.apple.cloudd/1970)>"
+    },
+    "url": "https://gateway.icloud.com/ckdatabase/api/client/record/sync"
+   },
+   {
+    "auth": null,
+    "body": "fb020aa102121c636f6d2e6170706c652e69636c6f75642e73656172636870617274791a1d636f6d2e6170706c652e69636c6f75642e7365617263687061727479643a280a2430463145324433432d344235412d363937382d383739362d4135423443334432453146301002420631332e342e314a0e4d6163426f6f6b50726f31382c335221636f6d2e6170706c652e636c6f75646b69742e436c6f75644b69744461656d6f6e5a0431393730920103352e30980101aa010946696e644d792e7079b201203046314532443343344235413639373838373936413542344333443245314630b80101c80101d201203030303030303030303030303030303030303030303030303030303030303043e801008a020c43303253594e544845544943900200980201122d0a2430303030303030302d303030302d343030302d383030302d30303030303030303030303810cd0818002001ea44250a0a437574746c656669736812126665746368566961626c65426f74746c65731a030a0170",
+    "headers": {
+     "X-Apple-I-MD": "otp-synthetic",
+     "X-Apple-I-MD-M": "machine-synthetic",
+     "X-Mme-Device-Id": "DEVICE-SYNTHETIC",
+     "accept": "application/x-protobuf",
+     "accept-encoding": "gzip",
+     "accept-language": "en-US,en;q=0.9",
+     "cache-control": "no-transform",
+     "content-encoding": "gzip",
+     "content-type": "application/x-protobuf; desc=\"https://gateway.icloud.com:443/static/protobuf/CloudDB/CloudDBClient.desc\"; messageType=RequestOperation; delimited=true",
+     "user-agent": "CloudKit/1970 (19H384)",
+     "x-apple-c2-metric-triggers": "0",
+     "x-apple-operation-group-id": "0000000000000000000000000000000D",
+     "x-apple-operation-id": "0000000000000000000000000000000E",
+     "x-apple-request-uuid": "00000000-0000-4000-8000-000000000009",
+     "x-cloudkit-authtoken": "SYNTHETIC-CK-TOKEN",
+     "x-cloudkit-bundleid": "com.apple.icloud.searchpartyd",
+     "x-cloudkit-containerid": "com.apple.icloud.searchparty",
+     "x-cloudkit-databasescope": "PRIVATE",
+     "x-cloudkit-duetpreclearedmode": "None",
+     "x-cloudkit-environment": "Production",
+     "x-cloudkit-userid": "_0123456789abcdef0123456789abcdef",
+     "x-mme-client-info": "<MacBookPro18,3> <Mac OS X;13.4.1;22F82> <com.apple.cloudkit.CloudKitDaemon/1970 (com.apple.cloudd/1970)>"
+    },
+    "url": "https://gateway.icloud.com/ckcoderouter/api/client/code/invoke"
+   }
+  ],
+  "zones": [
+   "0a210a0f0a0d0a0b426561636f6e53746f72651a0e0a02610012087a6f6e652d746167200a",
+   "0a120a100a0e0a0c5f64656661756c745a6f6e65"
+  ]
+ },
+ "identities": {
+  "": {
+   "cloudkit_client_info": "<com.apple.cloudkit.CloudKitDaemon/1970 (com.apple.cloudd/1970)>",
+   "model": "",
+   "os_version": "",
+   "prefix": ""
+  },
+  "<A> <B> <C> <D>": {
+   "cloudkit_client_info": "<A> <B> <com.apple.cloudkit.CloudKitDaemon/1970 (com.apple.cloudd/1970)>",
+   "model": "A",
+   "os_version": "",
+   "prefix": "<A> <B> "
+  },
+  "<Mac>": {
+   "cloudkit_client_info": "<Mac> <com.apple.cloudkit.CloudKitDaemon/1970 (com.apple.cloudd/1970)>",
+   "model": "Mac",
+   "os_version": "",
+   "prefix": "<Mac> "
+  },
+  "<MacBook> <macOS> <x>": {
+   "cloudkit_client_info": "<MacBook> <macOS> <com.apple.cloudkit.CloudKitDaemon/1970 (com.apple.cloudd/1970)>",
+   "model": "MacBook",
+   "os_version": "",
+   "prefix": "<MacBook> <macOS> "
+  },
+  "<MacBookPro18,3> <Mac OS X;13.4.1;22F82> <com.apple.AuthKit/1 (com.apple.dt.Xcode/3594.4.19)>": {
+   "cloudkit_client_info": "<MacBookPro18,3> <Mac OS X;13.4.1;22F82> <com.apple.cloudkit.CloudKitDaemon/1970 (com.apple.cloudd/1970)>",
+   "model": "MacBookPro18,3",
+   "os_version": "13.4.1",
+   "prefix": "<MacBookPro18,3> <Mac OS X;13.4.1;22F82> "
+  },
+  "<iPhone13,2> <iPhone OS;14.4;18D52> <com.apple.akd/1.0 (com.apple.akd/1.0)>": {
+   "cloudkit_client_info": "<iPhone13,2> <iPhone OS;14.4;18D52> <com.apple.cloudkit.CloudKitDaemon/1970 (com.apple.cloudd/1970)>",
+   "model": "iPhone13,2",
+   "os_version": "14.4",
+   "prefix": "<iPhone13,2> <iPhone OS;14.4;18D52> "
+  },
+  "garbage": {
+   "cloudkit_client_info": "<com.apple.cloudkit.CloudKitDaemon/1970 (com.apple.cloudd/1970)>",
+   "model": "",
+   "os_version": "",
+   "prefix": ""
+  },
+  "x<a>y<b;c;d>z": {
+   "cloudkit_client_info": "<a> <b;c;d> <com.apple.cloudkit.CloudKitDaemon/1970 (com.apple.cloudd/1970)>",
+   "model": "a",
+   "os_version": "c",
+   "prefix": "<a> <b;c;d> "
+  }
+ },
+ "results": {
+  "no_error": {
+   "client_error": null,
+   "code": 3,
+   "error_key": "",
+   "message": "CloudKit operation failed: no description given",
+   "raises": true,
+   "result": "0803",
+   "retry_after": null,
+   "server_error": null
+  },
+  "partial": {
+   "raises": false,
+   "result": "08021206220468616c66"
+  },
+  "server_only": {
+   "client_error": null,
+   "code": 4,
+   "error_key": "",
+   "message": "CloudKit operation failed: no description given",
+   "raises": true,
+   "result": "08041205120308f403",
+   "retry_after": null,
+   "server_error": 500
+  },
+  "success": {
+   "raises": false,
+   "result": "0801"
+  },
+  "throttled": {
+   "client_error": 6,
+   "code": 3,
+   "error_key": "KEY12345",
+   "message": "CloudKit operation failed (THROTTLED): slow down [KEY12345]",
+   "raises": true,
+   "result": "0803121b0a020806181e2209736c6f7720646f776e2a084b45593132333435",
+   "retry_after": 30,
+   "server_error": null
+  },
+  "unknown_client": {
+   "client_error": 99,
+   "code": 3,
+   "error_key": "",
+   "message": "CloudKit operation failed (client error 99): no description given",
+   "raises": true,
+   "result": "080312040a020863",
+   "retry_after": null,
+   "server_error": null
+  }
+ },
+ "resumed": {
+  "complete": true,
+  "requests": [
+   {
+    "auth": [
+     "1234567890",
+     "SYNTHETIC-MME-TOKEN"
+    ],
+    "body": "",
+    "headers": {
+     "X-Apple-I-MD": "otp-synthetic",
+     "X-Apple-I-MD-M": "machine-synthetic",
+     "X-Mme-Device-Id": "DEVICE-SYNTHETIC",
+     "accept": "application/x-protobuf",
+     "accept-encoding": "gzip",
+     "accept-language": "en-US,en;q=0.9",
+     "cache-control": "no-transform",
+     "user-agent": "CloudKit/1970 (19H384)",
+     "x-apple-c2-metric-triggers": "0",
+     "x-apple-operation-group-id": "00000000000000000000000000000065",
+     "x-apple-operation-id": "00000000000000000000000000000066",
+     "x-apple-request-uuid": "00000000-0000-4000-8000-000000000065",
+     "x-cloudkit-authtoken": "SYNTHETIC-CK-TOKEN",
+     "x-cloudkit-bundleid": "com.apple.icloud.searchpartyd",
+     "x-cloudkit-containerid": "com.apple.icloud.searchparty",
+     "x-cloudkit-databasescope": "PRIVATE",
+     "x-cloudkit-duetpreclearedmode": "None",
+     "x-cloudkit-environment": "Production",
+     "x-mme-client-info": "<MacBookPro18,3> <Mac OS X;13.4.1;22F82> <com.apple.cloudkit.CloudKitDaemon/1970 (com.apple.cloudd/1970)>"
+    },
+    "url": "https://gateway.icloud.com/setup/setup/ck/v1/ckAppInit?container=com.apple.icloud.searchparty"
+   },
+   {
+    "auth": null,
+    "body": "9c030aa102121c636f6d2e6170706c652e69636c6f75642e73656172636870617274791a1d636f6d2e6170706c652e69636c6f75642e7365617263687061727479643a280a2430463145324433432d344235412d363937382d383739362d4135423443334432453146301002420631332e342e314a0e4d6163426f6f6b50726f31382c335221636f6d2e6170706c652e636c6f75646b69742e436c6f75644b69744461656d6f6e5a0431393730920103352e30980101aa010946696e644d792e7079b201203046314532443343344235413639373838373936413542344333443245314630b80101c80101d201203030303030303030303030303030303030303030303030303030303030303637e801008a020c43303253594e544845544943900200980201122d0a2430303030303030302d303030302d343030302d383030302d30303030303030303030363610d50118002001aa0d460a06726573756d65123a0a0f0a0b426561636f6e53746f7265100612250a215f3031323334353637383961626364656630313233343536373839616263646566100718012032",
+    "headers": {
+     "X-Apple-I-MD": "otp-synthetic",
+     "X-Apple-I-MD-M": "machine-synthetic",
+     "X-Mme-Device-Id": "DEVICE-SYNTHETIC",
+     "accept": "application/x-protobuf",
+     "accept-encoding": "gzip",
+     "accept-language": "en-US,en;q=0.9",
+     "cache-control": "no-transform",
+     "content-encoding": "gzip",
+     "content-type": "application/x-protobuf; desc=\"https://gateway.icloud.com:443/static/protobuf/CloudDB/CloudDBClient.desc\"; messageType=RequestOperation; delimited=true",
+     "user-agent": "CloudKit/1970 (19H384)",
+     "x-apple-c2-metric-triggers": "0",
+     "x-apple-operation-group-id": "00000000000000000000000000000068",
+     "x-apple-operation-id": "00000000000000000000000000000069",
+     "x-apple-request-uuid": "00000000-0000-4000-8000-000000000067",
+     "x-cloudkit-authtoken": "SYNTHETIC-CK-TOKEN",
+     "x-cloudkit-bundleid": "com.apple.icloud.searchpartyd",
+     "x-cloudkit-containerid": "com.apple.icloud.searchparty",
+     "x-cloudkit-databasescope": "PRIVATE",
+     "x-cloudkit-duetpreclearedmode": "None",
+     "x-cloudkit-environment": "Production",
+     "x-cloudkit-userid": "_0123456789abcdef0123456789abcdef",
+     "x-mme-client-info": "<MacBookPro18,3> <Mac OS X;13.4.1;22F82> <com.apple.cloudkit.CloudKitDaemon/1970 (com.apple.cloudd/1970)>"
+    },
+    "url": "https://gateway.icloud.com/ckdatabase/api/client/record/sync"
+   }
+  ],
+  "status": 3,
+  "token": "746f6b656e2d32"
+ },
+ "tokens": {
+  "cloudKitToken": "SYNTHETIC-CK-TOKEN",
+  "mmeAuthToken": "SYNTHETIC-MME-TOKEN"
+ },
+ "varints": {
+  "0": "00",
+  "1": "01",
+  "127": "7f",
+  "128": "8001",
+  "16384": "808001",
+  "2147483648": "8080808008",
+  "300": "ac02",
+  "9223372036854775808": "80808080808080808001"
+ }
+}
