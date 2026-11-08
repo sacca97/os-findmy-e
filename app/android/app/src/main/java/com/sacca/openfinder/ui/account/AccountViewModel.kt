@@ -86,6 +86,16 @@ class AccountViewModel(private val container: AppContainer, private val onChange
         step(AccountStep.Ready(n))
     }
 
+    /** Imports static single-key tags into their own encrypted blob (never the accessory/rolling-key store). */
+    fun importStaticKeys(json: String) = run("Importing static tag keys…") {
+        val n = setup.importStaticKeys(json)
+        onChanged()
+        step(AccountStep.Ready(n))
+    }
+
+    /** Hashed advertising keys of the imported static tags — the BLE rekey check compares against these. */
+    suspend fun staticKeyHashes(): List<String> = setup.staticKeyHashes()
+
     fun signOut() = run("") { live.logout(); step(currentStep()); onChanged() }
 
     private suspend fun currentStep(): AccountStep = when {
