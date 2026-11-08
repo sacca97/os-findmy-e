@@ -3,6 +3,13 @@ package com.sacca.openfinder
 import android.app.Application
 import android.content.Context
 import android.os.StrictMode
+import androidx.work.BackoffPolicy
+import androidx.work.Configuration
+import androidx.work.Constraints
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.NetworkType
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
 import com.sacca.openfinder.anisette.AssetOrFileImageSource
 import com.sacca.openfinder.apple.Cooldown
 import com.sacca.openfinder.apple.GsaClient
@@ -13,6 +20,10 @@ import com.sacca.openfinder.data.OpenFinderRepository
 import com.sacca.openfinder.data.RustOpenFinderBackend
 import com.sacca.openfinder.security.SecretStore
 import com.sacca.openfinder.data.IconStore
+import com.sacca.openfinder.work.FetchWorker
+import com.sacca.openfinder.work.LastReports
+import java.io.File
+import java.util.concurrent.TimeUnit
 
 /** Manual dependency container. The UI only ever sees the backend through [repository]. */
 class AppContainer(context: Context) {
@@ -27,11 +38,31 @@ class AppContainer(context: Context) {
     val accountSetup: com.sacca.openfinder.domain.AccountSetup = liveBackend
 
     val repository = OpenFinderRepository(liveBackend, IconStore(context))
+
+    /** The weekly worker's last-known-location store (plain JSON in app-private storage). */
+    val lastReports by lazy { LastReports(File(context.filesDir, "reports")) }
 }
 
-class OpenFinderApp : Application() {
+/** Builds workers with the container's dependencies; the default reflective factory cannot. */
+private class OpenFinderWorkerFactory(private val container: AppContainer) : androidx.work.WorkerFactory() {
+    override fun createWorker(
+        appContext: Context,
+        workerClassName: String,
+        workerParameters: androidx.work.WorkerParameters,
+    ) = when (workerClassName) {
+        FetchWorker::class.java.name -> FetchWorker(appContext, workerParameters, container.lastReports)
+        else -> null   // unknown class: fall back to the default instantiation path
+    }
+}
+
+class OpenFinderApp : Application(), Configuration.Provider {
     lateinit var container: AppContainer
         private set
+
+    override val workManagerConfiguration: Configuration
+        get() = Configuration.Builder()
+            .setWorkerFactory(OpenFinderWorkerFactory(container))
+            .build()
 
     override fun onCreate() {
         super.onCreate()
@@ -40,5 +71,19 @@ class OpenFinderApp : Application() {
             StrictMode.setThreadPolicy(StrictMode.ThreadPolicy.Builder().detectAll().penaltyLog().build())
         }
         container = AppContainer(this)
+        scheduleWeeklyFetch()
+    }
+
+    /** One periodic fetch per install: 7 d period with a 1 d flex window, network required. UPDATE keeps the schedule across code changes. */
+    private fun scheduleWeeklyFetch() {
+        val request = PeriodicWorkRequestBuilder<FetchWorker>(7, TimeUnit.DAYS, 1, TimeUnit.DAYS)
+            .setConstraints(
+                Constraints.Builder()
+                    .setRequiredNetworkType(NetworkType.CONNECTED)
+                    .build())
+            .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 15, TimeUnit.MINUTES)
+            .build()
+        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+            FetchWorker.WORK_NAME, ExistingPeriodicWorkPolicy.UPDATE, request)
     }
 }

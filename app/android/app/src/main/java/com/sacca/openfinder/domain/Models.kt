@@ -40,6 +40,8 @@ data class Accessory(
     val name: String,
     val type: AccessoryType = AccessoryType.OTHER,
     val latestReport: LocationReport? = null,
+    /** Past reports, oldest first; the last one is [latestReport]. Bounded by the fetch window (7 days). */
+    val history: List<LocationReport> = emptyList(),
 )
 
 sealed interface AuthState {

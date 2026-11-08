@@ -18,6 +18,8 @@ data class RepositoryState(
     val refreshing: Boolean = false,
     val lastRefresh: Instant? = null,
     val error: OpenFinderError? = null,
+    /** Accessories exist but none has a report: the tag simply has not been seen by an iPhone yet — informational, not an error. */
+    val waitingForReports: Boolean = false,
 )
 
 /**
@@ -39,18 +41,30 @@ class OpenFinderRepository(private val backend: OpenFinderBackend, private val i
                 val reports = if (list.isEmpty()) emptyList() else runCatching { backend.fetchReports(list.map { it.id }) }
                     .getOrElse { e -> if (e is OpenFinderException && e.error is OpenFinderError.ReportsUnavailable) emptyList() else throw e }
                 val byId = reports.filter { it.isValid(now) }.groupBy { it.accessoryId }
-                    .mapValues { (_, v) -> v.maxBy { it.observedAt } }
+                    .mapValues { (_, v) -> v.sortedBy { it.observedAt } }   // oldest first; the last is the latest
                 val previous = _state.value.accessories.associateBy { it.id }
-                val merged = list.map { it.copy(latestReport = byId[it.id] ?: previous[it.id]?.latestReport ?: it.latestReport) }
+                val merged = list.map {
+                    // The fetch window (7 days) returns the full usable history; when an accessory got no
+                    // reports this time, keep the previous history so offline use still shows the trail.
+                    val history = byId[it.id] ?: previous[it.id]?.history ?: it.history
+                    it.copy(history = history, latestReport = history.lastOrNull())
+                }
                     .map(::withIcon).sortedWith(latestActivityFirst)
+                val waiting = merged.isNotEmpty() && merged.none { a -> a.latestReport != null }
                 _state.update {
                     it.copy(accessories = merged, loadedOnce = true, refreshing = false, lastRefresh = now,
-                        error = if (merged.isNotEmpty() && merged.none { a -> a.latestReport != null }) OpenFinderError.ReportsUnavailable() else null)
+                        waitingForReports = waiting,
+                        error = null)
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             } catch (e: OpenFinderException) {
-                _state.update { it.copy(refreshing = false, loadedOnce = true, error = e.error) }
+                // "No reports available" is the tag-not-seen-yet case, not a failure to show in red.
+                if (e.error is OpenFinderError.ReportsUnavailable) {
+                    _state.update { it.copy(refreshing = false, loadedOnce = true, waitingForReports = it.accessories.isNotEmpty(), error = null) }
+                } else {
+                    _state.update { it.copy(refreshing = false, loadedOnce = true, error = e.error) }
+                }
             } catch (e: Exception) {
                 _state.update { it.copy(refreshing = false, loadedOnce = true, error = OpenFinderError.Backend()) }
             }

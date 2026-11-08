@@ -25,6 +25,14 @@ import com.sacca.openfinder.domain.Accessory
 import com.sacca.openfinder.domain.OpenFinderError
 import java.time.Instant
 
+/** Track window options, mirroring the vendor app's track menu; the fetch window covers all of them (7 days). */
+enum class HistoryWindow(val label: String, val duration: java.time.Duration) {
+    H6("6 h", java.time.Duration.ofHours(6)),
+    H24("24 h", java.time.Duration.ofHours(24)),
+    D3("3 d", java.time.Duration.ofDays(3)),
+    D7("7 d", java.time.Duration.ofDays(7)),
+}
+
 /** Content of the draggable bottom sheet: header, state banners and the accessory list. */
 @Composable
 fun AccessorySheet(
@@ -33,6 +41,7 @@ fun AccessorySheet(
     loadedOnce: Boolean,
     refreshing: Boolean,
     error: OpenFinderError?,
+    waitingForReports: Boolean,
     now: Instant,
     onSelect: (String) -> Unit,
     onFitAll: () -> Unit,
@@ -40,6 +49,12 @@ fun AccessorySheet(
     onOpenInMaps: (Accessory) -> Unit,
     onSetup: () -> Unit,
     onChangeIcon: (String, com.sacca.openfinder.domain.AccessoryType) -> Unit,
+    /** Optional slot under the banners: the read-only BLE rekey check (see ble/RekeyCheck.kt). */
+    rekeyCheck: (@Composable () -> Unit)? = null,
+    /** Optional slot under the rekey check: ring + battery for a verified nearby tag (ble/TagTools.kt). */
+    tagTools: (@Composable () -> Unit)? = null,
+    historyWindow: java.time.Duration = java.time.Duration.ofHours(6),
+    onHistoryWindow: (java.time.Duration) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val listState = rememberLazyListState()
@@ -59,6 +74,21 @@ fun AccessorySheet(
             )
             if (accessories.size > 1) TextButton(onClick = onFitAll) { Text("Show all") }
         }
+        if (accessories.any { it.history.size > 1 }) {
+            // Track window: the same options the fetch window can fill (7 days).
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                HistoryWindow.entries.forEach { w ->
+                    androidx.compose.material3.FilterChip(
+                        selected = historyWindow == w.duration,
+                        onClick = { onHistoryWindow(w.duration) },
+                        label = { Text(w.label) },
+                    )
+                }
+            }
+        }
         if (error != null) {
             Row(
                 Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 4.dp),
@@ -68,7 +98,16 @@ fun AccessorySheet(
                 if (error is OpenFinderError.Authentication) TextButton(onClick = onSetup) { Text("Set up") }
                 TextButton(onClick = onRefresh) { Text("Retry") }
             }
+        } else if (waitingForReports) {
+            // Quiet informational state: the tag is ours and installed, but no iPhone has reported it yet.
+            Text(
+                "Waiting for the first report — no nearby iPhone has seen this tag's signal yet.",
+                Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 4.dp),
+                style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
+        rekeyCheck?.invoke()
+        tagTools?.invoke()
         when {
             !loadedOnce && refreshing -> Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()

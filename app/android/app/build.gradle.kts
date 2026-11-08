@@ -58,6 +58,8 @@ dependencies {
     implementation("androidx.compose.material:material-icons-core")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.11.0")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.11.0")
+    // Weekly background report fetch (FetchWorker). On-demand configuration via OpenFinderApp.
+    implementation("androidx.work:work-runtime-ktx:2.10.0")
     // Stable MapLibre Native Android SDK (OpenGL ES), used from Compose through AndroidView in ui/map/AccessoryMap.kt.
     // (MapLibre Compose 0.20.0 was tried first and dropped: GeoJSON sources that receive data after the first
     // composition never rendered. See app/README.md, "Map".)

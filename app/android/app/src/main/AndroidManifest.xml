@@ -1,11 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- INTERNET is for map tiles and Apple. Location only draws "you are here" on the map; it is never sent anywhere.
-         No Bluetooth or other sensitive permissions. -->
+    <!-- INTERNET is for Apple and (without the offline tile pack) map tiles. Location only draws "you are here"
+         on the map; it is never sent anywhere. POST_NOTIFICATIONS is the weekly fetch worker's report.
+         BLUETOOTH_SCAN is for the read-only rekey check: it listens to the tag's own advertisement and
+         never writes to it. Deliberately without neverForLocation, so results require the (already
+         requested) location permission on Android 12+. BLUETOOTH_CONNECT is the ring/battery GATT
+         session (own tag, own control): the only writes the app ever sends are the benign `PL`/`ST`
+         and `GVBAT` commands — never the rekey frames. -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
 
     <application
         android:name=".OpenFinderApp"
@@ -15,6 +24,17 @@
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@style/Theme.OpenFinder">
+
+        <!-- WorkManager is initialized on demand (OpenFinderApp implements Configuration.Provider). -->
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            tools:node="merge">
+            <meta-data
+                android:name="androidx.work.WorkManagerInitializer"
+                android:value="androidx.startup"
+                tools:node="remove" />
+        </provider>
 
         <activity
             android:name=".MainActivity"

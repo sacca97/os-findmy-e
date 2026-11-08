@@ -56,6 +56,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sacca.openfinder.BuildConfig
+import com.sacca.openfinder.ble.RekeyCheckSection
 import com.sacca.openfinder.domain.Accessory
 import com.sacca.openfinder.ui.components.AccessorySheet
 import com.sacca.openfinder.ui.selftest.SelfTestScreen
@@ -107,7 +108,10 @@ fun MapScreen(vm: MapViewModel, selfTestVm: SelfTestViewModel?, accountVm: com.s
         sheetContent = {
             AccessorySheet(
                 accessories = ui.accessories, selectedId = ui.selectedId, loadedOnce = ui.loadedOnce,
-                refreshing = ui.refreshing, error = ui.error, now = ui.now,
+                refreshing = ui.refreshing, error = ui.error, waitingForReports = ui.waitingForReports, now = ui.now,
+                historyWindow = ui.historyWindow, onHistoryWindow = vm::setHistoryWindow,
+                rekeyCheck = { RekeyCheckSection(accountVm) },
+                tagTools = { com.sacca.openfinder.ble.TagToolsSection(accountVm) },
                 onSetup = { accountVm.reload(); showAccount = true }, onChangeIcon = vm::setIcon,
                 onSelect = vm::select, onFitAll = vm::fitAll, onRefresh = vm::refresh, onOpenInMaps = ::openInMaps,
                 modifier = Modifier.padding(bottom = 4.dp),
@@ -117,6 +121,7 @@ fun MapScreen(vm: MapViewModel, selfTestVm: SelfTestViewModel?, accountVm: com.s
         Box(Modifier.fillMaxSize()) {
             AccessoryMap(
                 accessories = ui.accessories, selectedId = ui.selectedId, fitAllTick = ui.fitAllTick,
+                historyWindow = ui.historyWindow,
                 darkTheme = isSystemInDarkTheme(),
                 viewportInsets = PaddingValues(top = statusTop + 72.dp, bottom = peek + navBottom),
                 onAccessoryClick = vm::select,

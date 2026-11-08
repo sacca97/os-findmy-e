@@ -39,11 +39,34 @@ class OpenFinderRepositoryTest {
         assertEquals(44.0, repo.state.value.accessories.single().latestReport!!.latitude, 0.0)
     }
 
+    @Test fun keepsTheFullHistorySortedOldestFirst() = runBlocking {
+        val repo = OpenFinderRepository(FakeBackend(listOf(a), listOf(report("a", ageS = 600), report("a", lat = 44.0, ageS = 30), report("a", lat = 45.0, ageS = 90))))
+        repo.refresh()
+        val history = repo.state.value.accessories.single().history
+        assertEquals(listOf(600L, 90L, 30L), history.map { now.epochSecond - it.observedAt.epochSecond })
+        assertEquals(44.0, repo.state.value.accessories.single().latestReport!!.latitude, 0.0)
+        assertTrue(repo.state.value.accessories.single().history.last() === repo.state.value.accessories.single().latestReport)
+    }
+
+    @Test fun keepsPreviousHistoryWhenAnAccessoryGetsNoNewReports() = runBlocking {
+        val backend = FakeBackend(listOf(a), listOf(report("a", lat = 44.0, ageS = 30)))
+        val repo = OpenFinderRepository(backend)
+        repo.refresh()
+        backend.reports = emptyList()
+        repo.refresh()
+        assertEquals(1, repo.state.value.accessories.single().history.size)
+        assertEquals(44.0, repo.state.value.accessories.single().latestReport!!.latitude, 0.0)
+        // A kept (stale) report is not "waiting": the accessory still has a known location.
+        org.junit.Assert.assertFalse(repo.state.value.waitingForReports)
+    }
+
     @Test fun dropsMalformedReportsInsteadOfShowingThem() = runBlocking {
         val repo = OpenFinderRepository(FakeBackend(listOf(a), listOf(report("a", lat = Double.NaN), report("a", lon = 500.0), report("a", ageS = -7200))))
         repo.refresh()
         assertNull(repo.state.value.accessories.single().latestReport)
-        assertTrue(repo.state.value.error is OpenFinderError.ReportsUnavailable)
+        // Nothing usable survived: the quiet "waiting for the first report" state, not an error banner.
+        assertNull(repo.state.value.error)
+        assertTrue(repo.state.value.waitingForReports)
     }
 
     @Test fun keepsTheLastGoodDataWhenARefreshFails() = runBlocking {

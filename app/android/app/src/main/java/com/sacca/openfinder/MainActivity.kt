@@ -1,9 +1,13 @@
 package com.sacca.openfinder
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -17,9 +21,19 @@ import com.sacca.openfinder.viewmodel.MapViewModel
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
+    private val requestNotifications =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { /* the worker simply stays silent when denied */ }
+
+    private fun requestNotificationPermissionOnce() {
+        if (Build.VERSION.SDK_INT >= 33 &&
+            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) requestNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        requestNotificationPermissionOnce()
         val container = (application as OpenFinderApp).container
         val runner = SelfTestRunner(applicationContext, container.anisette, container::gsaClient, container.machineStorage)
 
@@ -32,6 +46,13 @@ class MainActivity : ComponentActivity() {
             lifecycleScope.launch {
                 if (!runner.machinePresent()) runner.importBundled()
                 runner.run()
+            }
+        }
+        // Automation (debug): `--ez fetch true` runs the weekly worker once right now, without waiting for the period.
+        if (BuildConfig.DEBUG && intent.getBooleanExtra("fetch", false)) {
+            lifecycleScope.launch {
+                androidx.work.WorkManager.getInstance(applicationContext).enqueue(
+                    androidx.work.OneTimeWorkRequestBuilder<com.sacca.openfinder.work.FetchWorker>().build())
             }
         }
 
