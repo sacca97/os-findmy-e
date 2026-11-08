@@ -71,12 +71,14 @@ class OpenFinderApp : Application(), Configuration.Provider {
             StrictMode.setThreadPolicy(StrictMode.ThreadPolicy.Builder().detectAll().penaltyLog().build())
         }
         container = AppContainer(this)
-        scheduleWeeklyFetch()
+        schedulePeriodicFetch()
     }
 
-    /** One periodic fetch per install: 7 d period with a 1 d flex window, network required. UPDATE keeps the schedule across code changes. */
-    private fun scheduleWeeklyFetch() {
-        val request = PeriodicWorkRequestBuilder<FetchWorker>(7, TimeUnit.DAYS, 1, TimeUnit.DAYS)
+    /** One periodic fetch per install: daily period with a 1 h flex window, network required.
+     *  Find My reports arrive in short bursts (observed: ~one burst per day from neighbour iPhones),
+     *  so a weekly fetch misses most of them. UPDATE keeps the schedule across code changes. */
+    private fun schedulePeriodicFetch() {
+        val request = PeriodicWorkRequestBuilder<FetchWorker>(1, TimeUnit.DAYS, 1, TimeUnit.HOURS)
             .setConstraints(
                 Constraints.Builder()
                     .setRequiredNetworkType(NetworkType.CONNECTED)

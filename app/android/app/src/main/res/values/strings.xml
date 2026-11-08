@@ -3,4 +3,46 @@
     <string name="worker_login_title">Sign in again</string>
     <string name="worker_login_text">The Apple session expired. Open OpenFinder to sign in.</string>
     <string name="worker_location_title">Tag has a new location</string>
+
+    <!-- Tag tools (ble/TagTools.kt) -->
+    <string name="action_ring">Ring</string>
+    <string name="action_battery">Battery</string>
+    <string name="action_rotate">Rotate key</string>
+    <string name="action_reclaim">Reclaim</string>
+    <string name="busy_ringing">Ringing…</string>
+    <string name="busy_battery">Reading battery…</string>
+    <string name="busy_rotating">Rotating…</string>
+    <string name="msg_no_keys">No static tag keys imported yet — import one first.</string>
+    <string name="msg_perm_granted">Permission granted — tap the action again.</string>
+    <string name="msg_perm_needed">Bluetooth actions need the nearby-devices and location permissions.</string>
+    <string name="msg_ring_done">Done — the tag rang.</string>
+    <string name="msg_ring_not_heard">The tag was not heard in 10 s (other Find My devices were). Shake it and retry.</string>
+    <string name="msg_nothing_heard">Nothing heard — shake the tag, keep it within a meter, retry.</string>
+    <string name="msg_connect_failed">Heard it but could not connect — retry once.</string>
+    <string name="msg_ring_rejected">Heard and connected, but the tag rejected the ring command.</string>
+    <string name="msg_battery_none">No answer — bring the tag within a meter and retry.</string>
+    <string name="msg_battery_sample">Battery sample %1$s ≈ %2$.2f V or %3$.2f V (calibration pending)</string>
+    <string name="msg_rotate_done">Rotated ✓ fresh key %1$s… — reports resume in the fresh window.</string>
+    <string name="msg_rotate_unverified">⚠ Frames accepted, fresh key not heard back yet — re-check with a scan before rotating again.</string>
+    <string name="msg_rotate_not_owned">Not loud enough (other Find My devices were around). Hold the tag within a meter.</string>
+    <string name="msg_rotate_rejected">⚠ Tag rejected the %1$s step — rotation not applied.</string>
+    <string name="msg_rotation_failed">Rotation failed: %1$s</string>
+    <string name="dlg_rotate_title">Rotate key?</string>
+    <string name="dlg_rotate_text">Writes a fresh key to the nearby tag (it beeps once). Reporting resumes in the new key\'s fresh window; the old key is removed.</string>
+    <string name="dlg_reclaim_title">Reclaim nearby tag?</string>
+    <string name="dlg_reclaim_text">No key check: writes our fresh key to the closest Find My-shaped tag (it beeps). Use only when a foreign write took the tag over — otherwise rotate instead.</string>
+    <string name="dlg_confirm">Confirm</string>
+    <string name="dlg_cancel">Cancel</string>
+    <string name="battery_age_now">just now</string>
+    <string name="battery_age_hours">%1$d h ago</string>
+    <string name="battery_age_days">%1$d d ago</string>
+    <string name="battery_status">Battery %1$s%2$s · %3$s</string>
+
+    <!-- Settings dialog (ui/map/MapScreen.kt) -->
+    <string name="settings_done">Done</string>
+    <string name="settings_title">Settings</string>
+    <string name="settings_account">Apple account…</string>
+    <string name="settings_clear_cache">Clear cached information</string>
+    <string name="settings_selftest">Anisette self-test (debug)</string>
+    <string name="settings_version">Version %1$s</string>
 </resources>

@@ -1,0 +1,48 @@
+<resources>
+    <string name="app_name">OpenFinder</string>
+    <string name="worker_login_title">重新登录</string>
+    <string name="worker_login_text">Apple 会话已过期。打开 OpenFinder 重新登录。</string>
+    <string name="worker_location_title">Tag 有新位置</string>
+
+    <!-- Tag 工具（ble/TagTools.kt） -->
+    <string name="action_ring">响铃</string>
+    <string name="action_battery">电量</string>
+    <string name="action_rotate">轮换钥匙</string>
+    <string name="action_reclaim">夺回</string>
+    <string name="busy_ringing">正在响铃…</string>
+    <string name="busy_battery">正在读电量…</string>
+    <string name="busy_rotating">正在轮换…</string>
+    <string name="msg_no_keys">还没有导入静态钥——请先导入。</string>
+    <string name="msg_perm_granted">权限已授予——请再点一次操作。</string>
+    <string name="msg_perm_needed">蓝牙操作需要"附近设备"和"位置信息"权限。</string>
+    <string name="msg_ring_done">完成——Tag 已响铃。</string>
+    <string name="msg_ring_not_heard">10 秒内没听到 Tag（附近有其他 Find My 设备）。晃一晃 Tag 再试。</string>
+    <string name="msg_nothing_heard">什么都没听到——晃一晃 Tag，保持 1 米内再试。</string>
+    <string name="msg_connect_failed">听到了但连接失败——再试一次。</string>
+    <string name="msg_ring_rejected">已连接，但 Tag 拒绝了响铃命令。</string>
+    <string name="msg_battery_none">没有响应——把 Tag 放到 1 米内再试。</string>
+    <string name="msg_battery_sample">电量采样 %1$s ≈ %2$.2f V 或 %3$.2f V（定标待定）</string>
+    <string name="msg_rotate_done">轮换成功 ✓ 新钥 %1$s…——新鲜期内恢复上报。</string>
+    <string name="msg_rotate_unverified">⚠ 命令已接受，但还没听到新钥广播——再次轮换前请先扫描确认。</string>
+    <string name="msg_rotate_not_owned">信号不够强（附近有其他 Find My 设备）。把 Tag 放到 1 米内。</string>
+    <string name="msg_rotate_rejected">⚠ Tag 拒绝了 %1$s 步骤——轮换未生效。</string>
+    <string name="msg_rotation_failed">轮换失败：%1$s</string>
+    <string name="dlg_rotate_title">轮换钥匙？</string>
+    <string name="dlg_rotate_text">向附近的 Tag 写入新钥（它会蜂鸣一声）。新钥新鲜期内恢复上报；旧钥将被移除。</string>
+    <string name="dlg_reclaim_title">夺回附近的 Tag？</string>
+    <string name="dlg_reclaim_text">不校验钥匙：把我们的新钥写入最近的 Find My 格式 Tag（它会蜂鸣）。仅在钥匙被第三方写走时使用——其他情况请用"轮换"。</string>
+    <string name="dlg_confirm">确认</string>
+    <string name="dlg_cancel">取消</string>
+    <string name="battery_age_now">刚刚</string>
+    <string name="battery_age_hours">%1$d 小时前</string>
+    <string name="battery_age_days">%1$d 天前</string>
+    <string name="battery_status">电量 %1$s%2$s · %3$s</string>
+
+    <!-- 设置对话框（ui/map/MapScreen.kt） -->
+    <string name="settings_done">完成</string>
+    <string name="settings_title">设置</string>
+    <string name="settings_account">Apple 账号…</string>
+    <string name="settings_clear_cache">清除缓存信息</string>
+    <string name="settings_selftest">Anisette 自检（调试）</string>
+    <string name="settings_version">版本 %1$s</string>
+</resources>

@@ -11,10 +11,12 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -24,6 +26,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import com.sacca.openfinder.R
 import androidx.compose.ui.unit.dp
 import com.sacca.openfinder.ui.account.AccountViewModel
 import kotlinx.coroutines.delay
@@ -44,7 +48,8 @@ sealed interface TagActionResult {
 /**
  * Own-tag, own-control actions over the vendor protocol round 2 (audit-notes.md, 第六轮): `PL`/`ST`
  * ring frames and the `GVBAT` battery query, both plain FEF2 writes on a verified nearby tag.
- * The rekey frames (`PK`/`UPDATE`/`GETTOKEN`) are deliberately absent from this whole file.
+ * The rekey frames (`PK`/`UPDATE`/`GETTOKEN`) live in [KeyRotation.kt] only (standing-ban revision,
+ * user-approved 2026-11-08) — this file still never writes them.
  */
 object TagActions {
     private const val TAG = "TagActions"
@@ -109,7 +114,7 @@ object GvBat {
     }
 }
 
-/** Ring + battery tools for the verified nearby tag; expects the static keys already imported. */
+/** Ring / battery / key-rotation tools for the verified nearby tag; expects static keys imported. */
 @Composable
 fun TagToolsSection(accountVm: AccountViewModel, modifier: Modifier = Modifier) {
     val context = LocalContext.current
@@ -117,30 +122,13 @@ fun TagToolsSection(accountVm: AccountViewModel, modifier: Modifier = Modifier) 
     var busy by remember { mutableStateOf<String?>(null) }
     var message by remember { mutableStateOf<String?>(null) }
     var batteryStatus by remember { mutableStateOf<String?>(null) }
+    var confirmRotate by remember { mutableStateOf(false) }
+    var confirmReclaim by remember { mutableStateOf(false) }
 
-    fun age(ms: Long): String {
-        val h = (System.currentTimeMillis() - ms) / 3_600_000
-        return when {
-            h < 1 -> "just now"
-            h < 48 -> "$h h ago"
-            else -> "${h / 24} d ago"
-        }
-    }
-
-    /** One line per stale rule: the standing battery status rendered above the buttons. */
-    suspend fun statusLine(expected: Set<String>): String? {
-        val mine = BatteryStore.load(context).filter { it.hashB64 in expected }.maxByOrNull { it.atMs }
-            ?: return null
-        val bytes = mine.rawHex.chunked(2).map { it.toInt(16).toByte() }.toByteArray()
-        val volts = GvBat.candidates(bytes)?.let { (be, le) -> " ≈ %.2f/%.2f V".format(be, le) } ?: ""
-        return "Battery ${mine.rawHex.uppercase()}$volts · ${age(mine.atMs)}"
-    }
-
-    suspend fun runExpected(): Set<String>? {
-        val expected = accountVm.staticKeyHashes().toSet()
-        if (expected.isEmpty()) { message = "No static tag keys imported yet — import one first."; return null }
-        return expected
-    }
+    val permissionsList = listOfNotNull(
+        Manifest.permission.BLUETOOTH_CONNECT.takeIf { Build.VERSION.SDK_INT >= 31 },
+        Manifest.permission.ACCESS_FINE_LOCATION,
+    )
 
     fun needsPermissions(): Boolean =
         Build.VERSION.SDK_INT >= 31 && (context.checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED ||
@@ -149,11 +137,29 @@ fun TagToolsSection(accountVm: AccountViewModel, modifier: Modifier = Modifier) 
 
     val requestPermissions = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { grants ->
         if (grants.values.all { it }) {
-            scope.launch {
-                // Re-run after the grant; the caller's button click already chose the action.
-                message = "Permission granted — tap the action again."
-            }
-        } else message = "Bluetooth actions need the nearby-devices and location permissions."
+            scope.launch { message = context.getString(R.string.msg_perm_granted) }
+        } else message = context.getString(R.string.msg_perm_needed)
+    }
+
+    /** One line per stale rule: the standing battery status rendered above the buttons. */
+    suspend fun statusLine(expected: Set<String>): String? {
+        val mine = BatteryStore.load(context).filter { it.hashB64 in expected }.maxByOrNull { it.atMs }
+            ?: return null
+        val bytes = mine.rawHex.chunked(2).map { it.toInt(16).toByte() }.toByteArray()
+        val volts = GvBat.candidates(bytes)?.let { (be, le) -> " ≈ %.2f/%.2f V".format(be, le) } ?: ""
+        val age = (System.currentTimeMillis() - mine.atMs) / 3_600_000
+        val ageText = when {
+            age < 1 -> context.getString(R.string.battery_age_now)
+            age < 48 -> context.getString(R.string.battery_age_hours, age)
+            else -> context.getString(R.string.battery_age_days, age / 24)
+        }
+        return context.getString(R.string.battery_status, mine.rawHex.uppercase(), volts, ageText)
+    }
+
+    suspend fun expectedKeys(): Set<String>? {
+        val expected = accountVm.staticKeyHashes().toSet()
+        if (expected.isEmpty()) { message = context.getString(R.string.msg_no_keys); return null }
+        return expected
     }
 
     LaunchedEffect(Unit) {
@@ -164,7 +170,7 @@ fun TagToolsSection(accountVm: AccountViewModel, modifier: Modifier = Modifier) 
         // sample whenever the app opens (no permission prompts from the auto path).
         val mine = BatteryStore.load(context).filter { it.hashB64 in expected }.maxByOrNull { it.atMs }
         if ((mine == null || System.currentTimeMillis() - mine.atMs > STALE_MS) && !needsPermissions() && busy == null) {
-            busy = "Reading battery…"
+            busy = context.getString(R.string.busy_battery)
             try {
                 val sample = TagActions.battery(context, expected)
                 if (sample != null) {
@@ -176,23 +182,22 @@ fun TagToolsSection(accountVm: AccountViewModel, modifier: Modifier = Modifier) 
         }
     }
 
-
     fun launchRing() {
         if (busy != null) return
         scope.launch {
-            busy = "Ringing…"
+            busy = context.getString(R.string.busy_ringing)
             try {
-                val expected = runExpected() ?: return@launch
+                val expected = expectedKeys() ?: return@launch
                 when (val r = TagActions.ring(context, expected)) {
-                    is TagActionResult.Ok -> message = "Done — the tag rang."
+                    is TagActionResult.Ok -> message = context.getString(R.string.msg_ring_done)
                     is TagActionResult.NotFound ->
-                        message = if (r.heardAny > 0) "The tag was not heard in 5 s (other Find My devices were). Shake it and retry."
-                                  else "Nothing heard in 5 s — shake the tag, keep it within a meter, retry."
-                    TagActionResult.ConnectFailed -> message = "Heard it but could not connect — retry once."
-                    TagActionResult.CommandRejected -> message = "Heard and connected, but the tag rejected the ring command."
+                        message = if (r.heardAny > 0) context.getString(R.string.msg_ring_not_heard)
+                                  else context.getString(R.string.msg_nothing_heard)
+                    TagActionResult.ConnectFailed -> message = context.getString(R.string.msg_connect_failed)
+                    TagActionResult.CommandRejected -> message = context.getString(R.string.msg_ring_rejected)
                 }
             } catch (e: Exception) {
-                message = "Ring failed: ${e.message}"
+                message = "${context.getString(R.string.action_ring)}: ${e.message}"
             } finally {
                 busy = null
             }
@@ -202,48 +207,129 @@ fun TagToolsSection(accountVm: AccountViewModel, modifier: Modifier = Modifier) 
     fun launchBattery() {
         if (busy != null) return
         scope.launch {
-            busy = "Reading battery…"
+            busy = context.getString(R.string.busy_battery)
             try {
-                val expected = runExpected() ?: return@launch
+                val expected = expectedKeys() ?: return@launch
                 val sample = TagActions.battery(context, expected)
                 if (sample == null) {
-                    message = "No answer — bring the tag within a meter and retry."
+                    message = context.getString(R.string.msg_battery_none)
                 } else {
                     BatteryStore.save(context, BatteryStore.Sample(sample.hashB64, sample.raw.joinToString("") { "%02x".format(it) }, System.currentTimeMillis()))
                     batteryStatus = statusLine(expected)
                     val (be, le) = GvBat.candidates(sample.raw) ?: return@launch
-                    message = "Battery sample 0x${sample.raw.joinToString("") { "%02x".format(it) }.uppercase()} ≈ %.2f V or %.2f V (calibration pending)".format(be, le)
+                    message = context.getString(R.string.msg_battery_sample,
+                        sample.raw.joinToString("") { "%02x".format(it) }.uppercase(), be, le)
                 }
             } catch (e: Exception) {
-                message = "Battery failed: ${e.message}"
+                message = "${context.getString(R.string.action_battery)}: ${e.message}"
             } finally {
                 busy = null
             }
         }
     }
 
+    /** Exports the fresh keypair for the PC tooling (fetch-mtag.sh). Failure is LOUD in logcat — a
+     *  silently lost export once left the PC querying a burned key (2026-11-08 reclaim incident). */
+    fun exportForPc(context: Context, json: String) {
+        val primary = java.io.File(context.getExternalFilesDir(null), "mtag-keypair.json")
+        val target = try {
+            primary.parentFile?.mkdirs()
+            primary.writeText(json)
+            Log.i("KeyRotation", "export ok: ${primary.absolutePath}")
+            return
+        } catch (e: Exception) {
+            Log.i("KeyRotation", "export to external dir failed: ${e::class.java.simpleName}")
+            java.io.File(context.filesDir, "mtag-keypair.json")   // debug fallback: adb run-as pull
+        }
+        try {
+            target.writeText(json)
+            Log.i("KeyRotation", "export ok (fallback): ${target.absolutePath}")
+        } catch (e: Exception) {
+            Log.i("KeyRotation", "export failed entirely: ${e::class.java.simpleName}")
+        }
+    }
+
+    /** Runs the gated rotation (ble/KeyRotation.kt) and persists the fresh key on Success/Unverified. */
+    fun launchRotation(mode: RotateMode) {
+        if (busy != null) return
+        scope.launch {
+            busy = context.getString(R.string.busy_rotating)
+            try {
+                val owned = accountVm.staticKeyHashes().toSet()
+                when (val r = rotateTagKey(context, mode, owned)) {
+                    is RotationOutcome.Success -> {
+                        val json = r.newKey.toJson().toString()
+                        accountVm.rotateStaticKeys(json, r.oldHashB64)
+                        exportForPc(context, json)
+                        message = context.getString(R.string.msg_rotate_done, r.newHashB64.take(8))
+                    }
+                    is RotationOutcome.Unverified -> {
+                        // Frames were accepted: persist so nothing is lost, but tell the user to re-check.
+                        val json = r.newKey.toJson().toString()
+                        accountVm.rotateStaticKeys(json, r.oldHashB64)
+                        exportForPc(context, json)
+                        message = context.getString(R.string.msg_rotate_unverified)
+                    }
+                    is RotationOutcome.NotFound ->
+                        message = if (r.heardAny > 0) context.getString(R.string.msg_rotate_not_owned)
+                                  else context.getString(R.string.msg_nothing_heard)
+                    RotationOutcome.ConnectFailed -> message = context.getString(R.string.msg_connect_failed)
+                    is RotationOutcome.ProtocolFailed -> message = context.getString(R.string.msg_rotate_rejected, r.step)
+                }
+            } catch (e: Exception) {
+                message = context.getString(R.string.msg_rotation_failed, e.message ?: "")
+            } finally {
+                busy = null
+            }
+        }
+    }
+
+
     batteryStatus?.let {
         Text(it, Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 2.dp),
             style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
     Row(modifier.fillMaxWidth().padding(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        val permissions = listOfNotNull(
-            Manifest.permission.BLUETOOTH_CONNECT.takeIf { Build.VERSION.SDK_INT >= 31 },
-            Manifest.permission.ACCESS_FINE_LOCATION,
-        )
         Button(onClick = {
-            if (needsPermissions()) requestPermissions.launch(permissions.toTypedArray()) else launchRing()
+            if (needsPermissions()) requestPermissions.launch(permissionsList.toTypedArray()) else launchRing()
         }, enabled = busy == null, modifier = Modifier.weight(1f)) {
-            Text(if (busy?.startsWith("Ringing") == true) busy!! else "Ring")
+            Text(stringResource(R.string.action_ring))
         }
         OutlinedButton(onClick = {
-            if (needsPermissions()) requestPermissions.launch(permissions.toTypedArray()) else launchBattery()
+            if (needsPermissions()) requestPermissions.launch(permissionsList.toTypedArray()) else launchBattery()
         }, enabled = busy == null, modifier = Modifier.weight(1f)) {
-            Text(when {
-                busy?.startsWith("Reading") == true -> busy!!
-                else -> "Battery"
-            })
+            Text(stringResource(R.string.action_battery))
         }
+    }
+    Row(modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 2.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        OutlinedButton(onClick = {
+            if (needsPermissions()) requestPermissions.launch(permissionsList.toTypedArray()) else confirmRotate = true
+        }, enabled = busy == null, modifier = Modifier.weight(1f)) {
+            Text(stringResource(R.string.action_rotate))
+        }
+        OutlinedButton(onClick = {
+            if (needsPermissions()) requestPermissions.launch(permissionsList.toTypedArray()) else confirmReclaim = true
+        }, enabled = busy == null, modifier = Modifier.weight(1f)) {
+            Text(stringResource(R.string.action_reclaim))
+        }
+    }
+    if (confirmRotate) {
+        AlertDialog(
+            onDismissRequest = { confirmRotate = false },
+            title = { Text(stringResource(R.string.dlg_rotate_title)) },
+            text = { Text(stringResource(R.string.dlg_rotate_text)) },
+            confirmButton = { TextButton(onClick = { confirmRotate = false; launchRotation(RotateMode.Own) }) { Text(stringResource(R.string.dlg_confirm)) } },
+            dismissButton = { TextButton(onClick = { confirmRotate = false }) { Text(stringResource(R.string.dlg_cancel)) } },
+        )
+    }
+    if (confirmReclaim) {
+        AlertDialog(
+            onDismissRequest = { confirmReclaim = false },
+            title = { Text(stringResource(R.string.dlg_reclaim_title)) },
+            text = { Text(stringResource(R.string.dlg_reclaim_text)) },
+            confirmButton = { TextButton(onClick = { confirmReclaim = false; launchRotation(RotateMode.Reclaim) }) { Text(stringResource(R.string.action_reclaim)) } },
+            dismissButton = { TextButton(onClick = { confirmReclaim = false }) { Text(stringResource(R.string.dlg_cancel)) } },
+        )
     }
     message?.let {
         val warn = it.startsWith("⚠")

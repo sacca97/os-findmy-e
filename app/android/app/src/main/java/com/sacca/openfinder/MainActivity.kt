@@ -55,6 +55,37 @@ class MainActivity : ComponentActivity() {
                     androidx.work.OneTimeWorkRequestBuilder<com.sacca.openfinder.work.FetchWorker>().build())
             }
         }
+        // Automation (debug): `--ez import_static true` imports static tag keys pushed by rotate_key.sh to the
+        // app's own external files dir (readable without storage permissions). Logs count only, never key material.
+        if (BuildConfig.DEBUG && intent.getBooleanExtra("import_static", false)) {
+            lifecycleScope.launch {
+                val tag = "OpenFinderImport"
+                try {
+                    val file = java.io.File(getExternalFilesDir(null), "mtag-keypair.json")
+                    if (!file.exists()) {
+                        android.util.Log.i(tag, "no keypair file at ${file.absolutePath}")
+                    } else {
+                        val n = container.accountSetup.importStaticKeys(file.readText())
+                        android.util.Log.i(tag, "imported $n static key(s) from ${file.name}")
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.i(tag, "import failed: ${e::class.java.simpleName}")
+                }
+            }
+        }
+        // Automation (debug): `--ez dump_static true` logs the static-key blob's entries (names and hashed
+        // key prefixes only — never key material) so blob/UI mismatches are diagnosable over adb.
+        if (BuildConfig.DEBUG && intent.getBooleanExtra("dump_static", false)) {
+            lifecycleScope.launch {
+                val tag = "OpenFinderImport"
+                try {
+                    val hashes = container.accountSetup.staticKeyHashes()
+                    android.util.Log.i(tag, "static blob: ${hashes.size} key(s), hashes=[${hashes.joinToString(",") { it.take(8) }}]")
+                } catch (e: Exception) {
+                    android.util.Log.i(tag, "dump failed: ${e::class.java.simpleName}: ${e.message?.take(120)}")
+                }
+            }
+        }
 
         setContent {
             OpenFinderTheme {

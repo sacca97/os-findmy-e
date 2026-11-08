@@ -260,6 +260,35 @@ class RustOpenFinderBackend(
         List(infos.length()) { i -> infos.getJSONObject(i).getString("hashed_adv_key_b64") }
     }
 
+    override suspend fun rotateStaticKeys(newJson: String, oldHashB64: String?): Int = onNative {
+        // Native validation first, exactly like the import path: a bad key must not reach the blob.
+        val arr = try { JSONArray(newJson) } catch (e: Exception) { JSONArray().put(JSONObject(newJson)) }
+        if (arr.length() == 0) throw OpenFinderException(OpenFinderError.Backend("empty rotation payload"))
+        call(JSONObject().put("cmd", "static_keys_info").put("keys", arr), touchesApple = false)
+        val keys = loadStaticKeys().toMutableList()
+        // REMOVE the superseded key (user decision 2026-11-08: one entry per tag — a burned key is
+        // frozen anyway, keeping it only cluttered the map). Hash match first (multi-tag safe);
+        // fallback for a reclaim after a foreign write: the tag no longer advertises any blob key,
+        // so retire same-named current entries.
+        if (keys.isNotEmpty()) {
+            val existing = JSONArray().also { a -> keys.forEach(a::put) }
+            val infos = call(JSONObject().put("cmd", "static_keys_info").put("keys", existing), touchesApple = false)
+                .getJSONArray("keys")
+            val byHash = List(infos.length()) { i -> infos.getJSONObject(i).getString("hashed_adv_key_b64") }
+            val freshName = arr.getJSONObject(0).optString("name").ifEmpty { "Static tag" }
+            val toRemove = (0 until keys.size).filter { i ->
+                (oldHashB64 != null && byHash.getOrNull(i) == oldHashB64) ||
+                    (oldHashB64 == null && keys[i].optString("name") == freshName)
+            }.ifEmpty {
+                (0 until keys.size).filter { keys[it].optString("name") == freshName }
+            }
+            for (i in toRemove.sortedDescending()) keys.removeAt(i)
+        }
+        for (i in 0 until arr.length()) keys.add(arr.getJSONObject(i))
+        saveStaticKeys(keys)
+        keys.size
+    }
+
     /** Opens the library in the background so the first request is not slow; no machine is fine. */
     suspend fun warmUp() {
         try { onNative { if (machines.hasMachine()) open() } } catch (_: OpenFinderException) { /* not ready yet */ }

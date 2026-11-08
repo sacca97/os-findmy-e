@@ -96,6 +96,13 @@ class AccountViewModel(private val container: AppContainer, private val onChange
     /** Hashed advertising keys of the imported static tags — the BLE rekey check compares against these. */
     suspend fun staticKeyHashes(): List<String> = setup.staticKeyHashes()
 
+    /** Persists a rotation result (ble/KeyRotation.kt): the superseded key renamed " (旧)", the fresh one appended. */
+    fun rotateStaticKeys(newJson: String, oldHashB64: String?) = run("Rotating static tag keys…") {
+        val n = setup.rotateStaticKeys(newJson, oldHashB64)
+        onChanged()
+        step(AccountStep.Ready(n))
+    }
+
     fun signOut() = run("") { live.logout(); step(currentStep()); onChanged() }
 
     private suspend fun currentStep(): AccountStep = when {

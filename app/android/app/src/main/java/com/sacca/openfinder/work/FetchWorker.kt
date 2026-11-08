@@ -87,6 +87,7 @@ class FetchWorker(
     }
 
     companion object {
+        /** Historical name kept: renaming would orphan the previously enqueued weekly job. */
         const val WORK_NAME = "findmy-weekly-fetch"
         private const val TAG = "FetchWorker"
         private const val MAX_RETRIES = 3
