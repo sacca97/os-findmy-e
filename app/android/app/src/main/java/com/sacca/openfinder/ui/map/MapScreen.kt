@@ -111,6 +111,7 @@ fun MapScreen(vm: MapViewModel, selfTestVm: SelfTestViewModel?, accountVm: com.s
                 accessories = ui.accessories, selectedId = ui.selectedId, loadedOnce = ui.loadedOnce,
                 refreshing = ui.refreshing, error = ui.error, waitingForReports = ui.waitingForReports, now = ui.now,
                 historyWindow = ui.historyWindow, onHistoryWindow = vm::setHistoryWindow,
+                historyStorageFailed = ui.historyStorageFailed,
                 rekeyCheck = { RekeyCheckSection(accountVm) },
                 tagTools = { com.sacca.openfinder.ble.TagToolsSection(accountVm) },
                 onSetup = { accountVm.reload(); showAccount = true }, onChangeIcon = vm::setIcon,
@@ -192,6 +193,7 @@ private fun SettingsDialog(
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(onClick = onOpenAccount, Modifier.fillMaxWidth()) { Text(stringResource(com.sacca.openfinder.R.string.settings_account)) }
                 OutlinedButton(onClick = onClearCache, Modifier.fillMaxWidth()) { Text(stringResource(com.sacca.openfinder.R.string.settings_clear_cache)) }
+                Text(stringResource(com.sacca.openfinder.R.string.history_retention), style = MaterialTheme.typography.bodySmall)
                 if (onOpenSelfTest != null) {
                     OutlinedButton(onClick = onOpenSelfTest, Modifier.fillMaxWidth()) { Text(stringResource(com.sacca.openfinder.R.string.settings_selftest)) }
                 }

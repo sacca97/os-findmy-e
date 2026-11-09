@@ -21,6 +21,17 @@ import com.sacca.openfinder.viewmodel.MapViewModel
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        if (BuildConfig.DEBUG && intent.getBooleanExtra("fetch", false)) {
+            lifecycleScope.launch {
+                androidx.work.WorkManager.getInstance(applicationContext).enqueue(
+                    androidx.work.OneTimeWorkRequestBuilder<com.sacca.openfinder.work.FetchWorker>().build())
+            }
+        }
+    }
+
     private val requestNotifications =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { /* the worker simply stays silent when denied */ }
 
@@ -48,7 +59,7 @@ class MainActivity : ComponentActivity() {
                 runner.run()
             }
         }
-        // Automation (debug): `--ez fetch true` runs the weekly worker once right now, without waiting for the period.
+        // Automation (debug): `--ez fetch true` runs the background worker once without waiting for the period.
         if (BuildConfig.DEBUG && intent.getBooleanExtra("fetch", false)) {
             lifecycleScope.launch {
                 androidx.work.WorkManager.getInstance(applicationContext).enqueue(
@@ -73,16 +84,15 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
-        // Automation (debug): `--ez dump_static true` logs the static-key blob's entries (names and hashed
-        // key prefixes only — never key material) so blob/UI mismatches are diagnosable over adb.
+        // Automation (debug): `--ez dump_static true` logs the imported static-key count only.
         if (BuildConfig.DEBUG && intent.getBooleanExtra("dump_static", false)) {
             lifecycleScope.launch {
                 val tag = "OpenFinderImport"
                 try {
                     val hashes = container.accountSetup.staticKeyHashes()
-                    android.util.Log.i(tag, "static blob: ${hashes.size} key(s), hashes=[${hashes.joinToString(",") { it.take(8) }}]")
+                    android.util.Log.i(tag, "static blob: ${hashes.size} key(s)")
                 } catch (e: Exception) {
-                    android.util.Log.i(tag, "dump failed: ${e::class.java.simpleName}: ${e.message?.take(120)}")
+                    android.util.Log.i(tag, "dump failed: ${e::class.java.simpleName}")
                 }
             }
         }

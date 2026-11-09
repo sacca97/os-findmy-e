@@ -21,3 +21,20 @@ app/screenshots/
 .agents/
 .codex/
 .aws/
+
+# Local audit captures, device state and install/signing artifacts are not source.
+/data-vivo-usb/
+/backups/
+/static/
+/.private/
+/owned-key*.json
+/mtag-keypair*.json
+/*-session.json
+*.apk
+*.aab
+*.pcap
+*.pcapng
+*.flow
+*.cfa
+*.jks
+*.keystore

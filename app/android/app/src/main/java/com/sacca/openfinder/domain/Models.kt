@@ -40,7 +40,7 @@ data class Accessory(
     val name: String,
     val type: AccessoryType = AccessoryType.OTHER,
     val latestReport: LocationReport? = null,
-    /** Past reports, oldest first; the last one is [latestReport]. Bounded by the fetch window (7 days). */
+    /** Locally accumulated sightings, oldest first; the last one is [latestReport]. */
     val history: List<LocationReport> = emptyList(),
 )
 

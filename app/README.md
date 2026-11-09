@@ -1,6 +1,8 @@
 # Android app
 
-Android app for Find My, built on the Rust library in [`../native`](../native/README.md). Its Apple-facing flow has been verified.
+Android app for Find My, built on the Rust library in [`../native`](../native/README.md).
+
+Static-key queries, vendor battery bars, encrypted cumulative history and 30-minute background queries are described in [Static tags](../docs/static-tags.md), including test coverage and outstanding device checks. The background worker does not connect to the tag over BLE or rotate its key.
 
 ## Build
 

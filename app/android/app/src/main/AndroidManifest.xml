@@ -3,12 +3,11 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <!-- INTERNET is for Apple and (without the offline tile pack) map tiles. Location only draws "you are here"
-         on the map; it is never sent anywhere. POST_NOTIFICATIONS is the weekly fetch worker's report.
+         on the map; it is never sent anywhere. POST_NOTIFICATIONS is for background report alerts.
          BLUETOOTH_SCAN is for the read-only rekey check: it listens to the tag's own advertisement and
          never writes to it. Deliberately without neverForLocation, so results require the (already
-         requested) location permission on Android 12+. BLUETOOTH_CONNECT is the ring/battery GATT
-         session (own tag, own control): the only writes the app ever sends are the benign `PL`/`ST`
-         and `GVBAT` commands — never the rekey frames. -->
+         requested) location permission on Android 12+. BLUETOOTH_CONNECT supports ring/battery
+         queries and the separately confirmed, nearby key-management flow. -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />

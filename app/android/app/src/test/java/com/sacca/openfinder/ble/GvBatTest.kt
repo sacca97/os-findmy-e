@@ -1,29 +1,23 @@
 package com.sacca.openfinder.ble
 
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
+import org.junit.Assert.*
 import org.junit.Test
 
 class GvBatTest {
-    @Test
-    fun `audit sample 3d20 gives the two candidate voltages`() {
-        val (be, le) = GvBat.candidates(byteArrayOf(0x3d.toByte(), 0x20.toByte()))!!
-        assertEquals(3.912, be, 0.001)   // big-endian / 4
-        assertEquals(4.127, le, 0.001)   // little-endian / 2
+    @Test fun vendorStatusCodesSelectFourBatteryIcons() {
+        assertEquals(4, GvBat.fromHex("3d20")!!.bars)
+        assertEquals(3, GvBat.fromHex("3D60")!!.bars)
+        assertEquals(2, GvBat.fromHex("3da0")!!.bars)
+        assertEquals(1, GvBat.fromHex("3de0")!!.bars)
     }
 
-    @Test
-    fun `reversed byte order gives the other candidate reading, not the same one`() {
-        // 0x203d: be = 8253 → 2.06 V (implausible, expected); le = 15648 → 7.82 V (implausible too) —
-        // the asymmetry is the point: only one ordering of the real sample yields a plausible voltage.
-        val (be, le) = GvBat.candidates(byteArrayOf(0x20.toByte(), 0x3d.toByte()))!!
-        assertEquals(2.06325, be, 0.001)
-        assertEquals(7.824, le, 0.001)
+    @Test fun unexpectedStatusIsUnknownInsteadOfLowOrFull() {
+        assertNull(GvBat.fromHex("3d00")!!.bars)
     }
 
-    @Test
-    fun `too short a sample is rejected`() {
-        assertNull(GvBat.candidates(byteArrayOf(0x3d.toByte())))
-        assertNull(GvBat.candidates(ByteArray(0)))
+    @Test fun nonBatteryFramesAndMalformedInputAreRejected() {
+        for (raw in listOf("", "3d", "203d", "3d2060", "zzzz", "  20")) assertNull(GvBat.fromHex(raw))
+        assertNull(GvBat.decode(byteArrayOf(0x3d)))
+        assertNull(GvBat.decode(byteArrayOf(0x55, 0x20)))
     }
 }

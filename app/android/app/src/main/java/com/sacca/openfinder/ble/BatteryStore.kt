@@ -1,31 +1,52 @@
 package com.sacca.openfinder.ble
 
 import android.content.Context
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 
-/**
- * Last `GVBAT` sample per tag key hash, persisted in files/ as plain JSON — the battery reading is
- * not a credential and follows the same "plain file" rule as the weekly worker's last_reports.
- * The UI reads this on start so the battery is a standing status, not something behind a button.
- */
+/** Nearby battery observations only: a remote location refresh cannot update this timestamp. */
 object BatteryStore {
-    class Sample(val hashB64: String, val rawHex: String, val atMs: Long)
+    data class Sample(val hashB64: String, val rawHex: String, val atMs: Long)
+    private val lock = Any()
+    suspend fun load(context: Context): List<Sample> = withContext(Dispatchers.IO) {
+        synchronized(lock) { BatteryHistory(File(context.filesDir, "tag_battery.json")).read() }
+    }
+    suspend fun save(context: Context, sample: Sample) = withContext(Dispatchers.IO) {
+        synchronized(lock) { BatteryHistory(File(context.filesDir, "tag_battery.json")).append(sample) }
+    }
+}
 
-    private fun file(context: Context) = File(context.filesDir, "tag_battery.json")
+/** Legacy single-sample arrays migrate naturally. Atomic writes retain 90 days / 1,000 samples per key. */
+class BatteryHistory(private val file: File) {
+    fun read(nowMs: Long = System.currentTimeMillis()): List<BatteryStore.Sample> {
+        if (!file.exists()) return emptyList()
+        val arr = JSONArray(file.readText())
+        return List(arr.length()) { i ->
+            val o = arr.getJSONObject(i)
+            BatteryStore.Sample(o.getString("hash"), o.getString("raw"), o.getLong("at"))
+        }.filter { it.hashB64.isNotBlank() && GvBat.fromHex(it.rawHex) != null && it.atMs > 0 && it.atMs <= nowMs + 300_000 }
+            .sortedBy { it.atMs }
+    }
 
-    fun load(context: Context): List<Sample> = runCatching {
-        val arr = JSONArray(file(context).readText())
-        List(arr.length()) { i ->
-            arr.getJSONObject(i).let { Sample(it.getString("hash"), it.getString("raw"), it.getLong("at")) }
-        }
-    }.getOrDefault(emptyList())
-
-    fun save(context: Context, sample: Sample) {
-        val all = load(context).filter { it.hashB64 != sample.hashB64 } + sample
+    fun append(sample: BatteryStore.Sample, nowMs: Long = System.currentTimeMillis()) {
+        require(sample.hashB64.isNotBlank() && GvBat.fromHex(sample.rawHex) != null)
+        require(sample.atMs in 1..(nowMs + 300_000))
+        // An unreadable file throws, so a transient read failure cannot erase the previous samples.
+        val all = (read(nowMs) + sample).distinctBy { it.hashB64 to it.atMs }.groupBy { it.hashB64 }
+            .values.flatMap { samples ->
+                samples.filter { it.atMs >= nowMs - 90L * 86_400_000 }.sortedBy { it.atMs }.takeLast(1000)
+                    .ifEmpty { samples.takeLast(1) }
+            }.sortedBy { it.atMs }
         val arr = JSONArray()
         all.forEach { arr.put(JSONObject().put("hash", it.hashB64).put("raw", it.rawHex).put("at", it.atMs)) }
-        runCatching { file(context).writeText(arr.toString()) }
+        file.parentFile?.mkdirs()
+        val tmp = File.createTempFile("battery-", ".tmp", file.parentFile)
+        try {
+            tmp.writeText(arr.toString())
+            check(tmp.renameTo(file)) { "could not store battery history" }
+        } finally { tmp.delete() }
     }
 }

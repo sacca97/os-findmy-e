@@ -42,8 +42,7 @@ var lastFindMyShaped: Int = 0
  * enforced by [nearRssi]: ring and battery are only offered while the tag answers this loud.
  *
  * The scan is read-only. Nothing in this file ever sends `PK`, `UPDATE` or `GETTOKEN` — the only
- * writes the app performs over BLE are the benign `PL`/`ST` (ring) and `GVBAT` (battery) commands
- * defined by the vendor-protocol round 2 in audit-notes.md.
+ * control commands issued here are `PL`/`ST` (ring) and `GVBAT` (battery); key management is separate.
  */
 @SuppressLint("MissingPermission")   // callers hold BLUETOOTH_SCAN (+ location on this Android version)
 suspend fun scanForVerifiedTag(context: Context, expectedB64: Set<String>, seconds: Int = 3, nearRssi: Int = -70): VerifiedTag? {
@@ -78,25 +77,8 @@ suspend fun scanForVerifiedTag(context: Context, expectedB64: Set<String>, secon
     lastFindMyShaped = findMyShaped
     // Diagnostics: how many adverts at all, how many Find My-shaped, how many ours (duty-cycled tags
     // advertise in bursts — "0 shaped" after a shake means the burst has not started yet, retry).
-    // Per-device hash prefixes (hashed advert keys are public ids; never any key material) so a
-    // tag/app mismatch is visible in one run instead of a guessing loop (2026-11-08 rotation debug).
-    val heardPrefixes = heardDistinctHashes(heard)
-    Log.i("TagLink", "scan: ${heard.size} advert(s), $findMyShaped find-my-shaped, ${verified.size} expected-tag sample(s), best rssi ${verified.maxOfOrNull { it.rssi } ?: "none"}; " +
-        "heard=[${heardPrefixes.joinToString(",") { it.take(8) }}] expected=[${expectedB64.joinToString(",") { it.take(8) }}]")
+    Log.i("TagLink", "scan: ${heard.size} advert(s), $findMyShaped find-my-shaped, ${verified.size} expected-tag sample(s), best rssi ${verified.maxOfOrNull { it.rssi } ?: "none"}")
     return verified.maxByOrNull { it.rssi }
-}
-
-/** Distinct hashed advert keys (base64) heard during a scan, strongest first — diagnostics only. */
-private fun heardDistinctHashes(heard: ConcurrentLinkedQueue<ScanResult>): List<String> {
-    val seen = LinkedHashMap<String, Int>()
-    for (result in heard) {
-        val data = result.scanRecord?.getManufacturerSpecificData(0x004C) ?: continue
-        if (data.size < 26 || data[0] != 0x12.toByte() || data[1] != 0x19.toByte()) continue
-        val key = advertisedPublicKey(result.device?.address ?: "", data) ?: continue
-        val hashB64 = Base64.getEncoder().encodeToString(MessageDigest.getInstance("SHA-256").digest(key))
-        seen.merge(hashB64, result.rssi, ::maxOf)
-    }
-    return seen.entries.sortedByDescending { it.value }.map { it.key }
 }
 
 /**

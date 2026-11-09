@@ -18,12 +18,14 @@ data class LastReportEntry(
  *
  * Coordinates are sightings, not credentials, and the manifest sets `allowBackup=false`, so this
  * deliberately does not go through [com.sacca.openfinder.security.SecretStore]: the point is that
- * the UI and the weekly worker can share the last known state across process restarts. A missing
+ * the UI and the background worker can share the last known state across process restarts. A missing
  * or unreadable file reads as empty; writes go through temp-file-and-rename so a crash cannot
  * leave a half-written file behind.
  */
 class LastReports(private val dir: File) {
     private val file = File(dir, FILE_NAME)
+
+    fun clear() { check(!file.exists() || file.delete()) { "could not clear last reports" } }
 
     /** accessory id -> newest report. Empty when nothing was persisted (or the file is unreadable). */
     fun read(): Map<String, LastReportEntry> {

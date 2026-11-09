@@ -96,7 +96,8 @@ class RustOpenFinderBackend(
         val infos = reply.getJSONArray("keys")
         rolling + List(infos.length()) { i ->
             val o = infos.getJSONObject(i)
-            Accessory(id = o.getString("hashed_adv_key_b64"), name = o.optString("name").ifEmpty { "Static tag" })
+            val name = if (o.isNull("name")) "Static tag" else o.optString("name").ifBlank { "Static tag" }
+            Accessory(id = o.getString("hashed_adv_key_b64"), name = name)
         }
     }
 
@@ -157,6 +158,9 @@ class RustOpenFinderBackend(
         for (i in 0 until results.length()) {
             val r = results.getJSONObject(i)
             val id = r.getString("hashed_adv_key_b64")
+            if (com.sacca.openfinder.BuildConfig.DEBUG) android.util.Log.i("StaticFetch",
+                "reports=${r.getJSONArray("reports").length()} selected=${id in wanted} " +
+                    "undecryptable=${r.optInt("undecryptable")} invalid=${r.optInt("invalid")}")
             if (id in wanted) out += parseReports(r.getJSONArray("reports"), id)
         }
         return out
@@ -266,8 +270,7 @@ class RustOpenFinderBackend(
         if (arr.length() == 0) throw OpenFinderException(OpenFinderError.Backend("empty rotation payload"))
         call(JSONObject().put("cmd", "static_keys_info").put("keys", arr), touchesApple = false)
         val keys = loadStaticKeys().toMutableList()
-        // REMOVE the superseded key (user decision 2026-11-08: one entry per tag — a burned key is
-        // frozen anyway, keeping it only cluttered the map). Hash match first (multi-tag safe);
+        // Keep one active key entry per tag. Match the superseded hash first (multi-tag safe);
         // fallback for a reclaim after a foreign write: the tag no longer advertises any blob key,
         // so retire same-named current entries.
         if (keys.isNotEmpty()) {

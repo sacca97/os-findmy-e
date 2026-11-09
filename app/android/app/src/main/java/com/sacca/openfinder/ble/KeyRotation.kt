@@ -13,25 +13,20 @@ import java.util.concurrent.ConcurrentLinkedQueue
 import kotlinx.coroutines.delay
 
 /**
- * Key rotation for the static single-key tag, over the vendor rekey protocol
- * (`GETTOKEN` → `PK`+pub → `UPDATE` on FEF2, audit-notes 第五轮).
+ * Nearby key management for a static single-key tag, using `GETTOKEN` → `PK`+pub → `UPDATE` on FEF2.
  *
- * **Standing-ban revision, user-approved 2026-11-08.** The audit originally forbade any rekey
- * writes in the app: the protocol has no ownership authentication (finding F6), so the write
- * frames are also an attack primitive. The user then hit the Apple-side per-identity cooldown
- * (第七轮终判: a key only reports during a short "fresh identity" window, then freezes — the
- * vendor product stays live precisely by rotating keys constantly), and approved rotation as a
- * feature under these gates:
+ * This protocol does not authenticate ownership. Rotation is an explicit local operation,
+ * never a background report-refresh strategy or a way to restore a lost tag remotely.
+ * The UI requires confirmation, and the following gates apply:
  *
  *  - [RotateMode.Own] (normal rotation): the target must currently advertise one of the IMPORTED
- *    keys and answer at [OWN_NEAR_RSSI] or louder. The app can therefore never rotate a tag it
- *    does not already own.
+ *    keys and answer at [ROTATE_NEAR_RSSI] or louder.
  *  - [RotateMode.Reclaim] (recovery): no hash gate — after someone else's write the tag no longer
  *    advertises our key, so reclaiming is only possible by matching the DEONE GATT service. The
- *    UI must double-confirm this mode; it is the same capability the audit used over USB.
+ *    UI must explicitly confirm this mode. Use only with a device the user is authorised to manage.
  *
- * In both modes the app writes only its OWN freshly generated key and keeps the old key blob for
- * residual-report fetches — never a third party's key into a third party's tag.
+ * A newly generated key is persisted on success or an accepted-but-unverified write; the
+ * superseded entry is removed from the active tag list.
  */
 sealed interface RotateMode {
     /** Normal rotation: gated on the advertised hash being an imported key. */
@@ -78,7 +73,7 @@ suspend fun rotateTagKey(context: Context, mode: RotateMode, ownedHashes: Set<St
         is RotateMode.Reclaim -> scanStrongestShaped(context, seconds = 10)
             ?: run { Log.i(TAG, "reclaim: no find-my-shaped tag heard loud enough"); return RotationOutcome.NotFound(lastFindMyShaped) }
     }
-    Log.i(TAG, "target rssi=${target.rssi} hash=${target.hashB64.take(8)}…")
+    Log.i(TAG, "target rssi=${target.rssi}")
 
     val newKey = KeyPair.generate()
 

@@ -22,9 +22,9 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 /**
- * The weekly background fetch (WorkManager, period 7 d / flex 1 d, network required).
+ * Background report fetch; the periodic interval is configured in OpenFinderApp.
  *
- * Contract (see HANDOFF-ANDROID.md §5): no session or no tags -> quiet success, the period is not
+ * Contract: no session or no tags -> quiet success, the period is not
  * worth retrying; authentication failures notify once and never retry (only a human can log in
  * again); network/backend failures retry with backoff up to a few attempts within the window;
  * a 429 is recorded by the shared [Cooldown][com.sacca.openfinder.apple.Cooldown] and never loops.
@@ -40,12 +40,12 @@ class FetchWorker(
     override suspend fun doWork(): Result {
         val container = (applicationContext as OpenFinderApp).container
         val backend = container.liveBackend
-        Log.i(TAG, "weekly fetch starting (attempt $runAttemptCount)")
+        Log.i(TAG, "background fetch starting (attempt $runAttemptCount)")
 
         val auth = runCatching { backend.getAuthState() }.getOrNull()
         if (auth != AuthState.Authenticated) {
             // Only nag when the app is set up (tags imported): a user who never signed in must not
-            // be notified every week for an app they only opened once.
+            // receive recurring sign-in notifications for an app they only opened once.
             val hasTags = runCatching { backend.hasAccessories() }.getOrDefault(false)
             Log.i(TAG, "session=$auth, tags=$hasTags -> ${if (hasTags) "notify sign-in" else "quiet success"}")
             if (hasTags) Notifier(applicationContext).loginNeeded()
@@ -79,7 +79,7 @@ class FetchWorker(
         val previous = lastReports.read()
         val freshIds = LastReports.newerThan(previous, currentEntries).keys
         lastReports.write(currentEntries)
-        Log.i(TAG, "persisted ${currentEntries.size} accessory report(s), $freshIds new")
+        Log.i(TAG, "persisted ${currentEntries.size} accessory report(s), ${freshIds.size} new")
         if (freshIds.isNotEmpty()) {
             Notifier(applicationContext).newLocations(named.filter { it.first in freshIds }.map { it.second to it.third })
         }

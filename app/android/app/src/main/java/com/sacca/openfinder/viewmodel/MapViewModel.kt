@@ -22,12 +22,13 @@ data class MapUiState(
     val refreshing: Boolean = false,
     val error: OpenFinderError? = null,
     val waitingForReports: Boolean = false,
+    val historyStorageFailed: Boolean = false,
     val historyWindow: java.time.Duration = DEFAULT_HISTORY_WINDOW,
     val now: Instant = Instant.now(),
     val fitAllTick: Int = 0,
 ) {
     companion object {
-        /** Matches the vendor app's track options; the fetch window itself is 7 days. */
+        /** Initial map window; older sightings remain in the local archive. */
         val DEFAULT_HISTORY_WINDOW: java.time.Duration = java.time.Duration.ofHours(6)
     }
 }
@@ -55,6 +56,7 @@ class MapViewModel(
             selectedId = sel?.takeIf { id -> repo.accessories.any { it.id == id } },
             loadedOnce = repo.loadedOnce, refreshing = repo.refreshing, error = repo.error,
             waitingForReports = repo.waitingForReports,
+            historyStorageFailed = repo.historyStorageFailed,
             historyWindow = window,
             now = now, fitAllTick = tick,
         )
@@ -72,7 +74,7 @@ class MapViewModel(
     fun refresh() { viewModelScope.launch { repository.refresh(); clock.value = Instant.now() } }
     fun select(id: String?) { saved["selected"] = id }
     fun fitAll() { select(null); fitTick.value += 1 }
-    fun clearCache() { repository.clearCache(); select(null) }
+    fun clearCache() { viewModelScope.launch { repository.clearCache(); select(null) } }
 
     fun setIcon(id: String, type: com.sacca.openfinder.domain.AccessoryType) = repository.setIcon(id, type)
 }

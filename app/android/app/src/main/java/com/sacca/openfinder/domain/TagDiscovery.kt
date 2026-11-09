@@ -38,9 +38,8 @@ interface AccountSetup {
     suspend fun staticKeyHashes(): List<String>
 
     /**
-     * Persists a key rotation result (user-approved 2026-11-08, see ble/KeyRotation.kt): appends [newJson]
-     * as the current key and renames the superseded key with a " (旧)" suffix (kept so the weekly fetch
-     * still pulls any residual reports an old key may still receive). The superseded entry is the one whose
+     * Persists a nearby key rotation result: appends [newJson] as the current key and removes
+     * the superseded active entry. The superseded entry is the one whose
      * hashed advertising key equals [oldHashB64] (the tag's key before the write); when that hash is not in
      * the blob (reclaim after a foreign write), entries named exactly like the fresh key are retired instead.
      * Returns the new blob size. No Apple contact.

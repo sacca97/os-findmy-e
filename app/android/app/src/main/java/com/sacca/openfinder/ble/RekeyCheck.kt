@@ -33,12 +33,11 @@ import kotlinx.coroutines.launch
 
 /**
  * Read-only rekey check for static single-key tags: scan for the tag's own advertisement and compare the
- * advertised key against the imported one. The app NEVER writes to the tag.
+ * advertised key against the imported one. This scan never writes to the tag.
  *
  * Apple's Find My advertisement (manufacturer data 0x004C, leading `12 19`) carries 22 bytes of the tag's
  * P-224 public key at data[3..25); the other 6 bytes ride in the device address, with the top two bits of
- * the first byte taken from data[25]'s low two bits — the same reconstruction as the audit's
- * `provision_tag.py:key_matches`. sha256 over the reconstructed 28-byte key equals the imported static
+ * the first byte taken from data[25]'s low two bits. sha256 over the reconstructed 28-byte key equals the imported static
  * tag's hashed advertising key (the accessory id), so no private-key material is needed here.
  */
 
@@ -111,10 +110,9 @@ suspend fun scanForExpectedKeys(context: Context, expectedB64: Set<String>, seco
         val digest = MessageDigest.getInstance("SHA-256").digest(key)
         val hashB64 = Base64.getEncoder().encodeToString(digest)
         val expected = hashB64 in expectedB64
-        // Longitudinal calibration data: the advertisement's status byte (data[2]) over time, to be
-        // correlated with GVBAT readings until the battery bit is identified (audit-notes 第六轮补遗 2).
+        // Keep protocol diagnostics without logging device addresses or advertising identifiers.
         if (expected) Log.i("RekeyCheck",
-            "ours: addr=${result.device?.address} status=0x%02x rssi=${result.rssi}".format(data[2]))
+            "expected tag: status=0x%02x rssi=${result.rssi}".format(data[2]))
         if (!seen.add(hashB64)) continue          // the same tag repeats its frame many times per second
         if (expected) matched++ else others.add(digest to result.rssi)
     }

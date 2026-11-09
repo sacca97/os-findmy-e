@@ -300,22 +300,30 @@ mod fetch {
 
     struct Server {
         calls: Arc<Mutex<Vec<Value>>>,
+        paths: Arc<Mutex<Vec<String>>>,
     }
 
     async fn start(replies: Vec<Vec<Value>>) -> (String, Server) {
+        start_with_status(replies, 200).await
+    }
+
+    async fn start_with_status(replies: Vec<Vec<Value>>, http_status: u16) -> (String, Server) {
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let addr = listener.local_addr().unwrap();
         let replies = Arc::new(Mutex::new(replies));
         let calls = Arc::new(Mutex::new(Vec::new()));
-        let (r, c) = (replies.clone(), calls.clone());
+        let paths = Arc::new(Mutex::new(Vec::new()));
+        let (r, c, p) = (replies.clone(), calls.clone(), paths.clone());
         tokio::spawn(async move {
             loop {
                 let Ok((mut socket, _)) = listener.accept().await else { break };
-                let (r, c) = (r.clone(), c.clone());
+                let (r, c, p) = (r.clone(), c.clone(), p.clone());
                 tokio::spawn(async move {
-                    let Some(body) = read_body(&mut socket).await else { return };
+                    let Some((path, body)) = read_body(&mut socket).await else { return };
+                    p.lock().await.push(path);
                     let req: Value = serde_json::from_slice(&body).unwrap_or(Value::Null);
-                    let fetch = req.get("fetch").cloned().unwrap_or(Value::Null);
+                    let legacy = req.get("search").is_some();
+                    let fetch = req.get("fetch").or_else(|| req.get("search")).cloned().unwrap_or(Value::Null);
                     c.lock().await.push(fetch);
                     let index = c.lock().await.len() - 1;
                     let call = {
@@ -331,12 +339,15 @@ mod fetch {
                             })
                         })
                         .collect();
-                    let response = json!({
-                        "acsnLocations": {"statusCode": "200", "locationPayload": payload}
-                    })
-                    .to_string();
+                    let response = if legacy {
+                        json!({"statusCode": "200", "results": call.iter().map(|item| json!({
+                            "id": item["hashed"], "payload": item["payload"],
+                        })).collect::<Vec<_>>()})
+                    } else {
+                        json!({"acsnLocations": {"statusCode": "200", "locationPayload": payload}})
+                    }.to_string();
                     let out = format!(
-                        "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                        "HTTP/1.1 {http_status} Test\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
                         response.len(),
                         response
                     );
@@ -345,10 +356,10 @@ mod fetch {
                 });
             }
         });
-        (format!("http://{addr}"), Server { calls })
+        (format!("http://{addr}"), Server { calls, paths })
     }
 
-    async fn read_body(socket: &mut tokio::net::TcpStream) -> Option<Vec<u8>> {
+    async fn read_body(socket: &mut tokio::net::TcpStream) -> Option<(String, Vec<u8>)> {
         let mut buf = Vec::new();
         let mut tmp = [0u8; 4096];
         loop {
@@ -374,7 +385,8 @@ mod fetch {
                     body.extend_from_slice(&tmp[..n]);
                 }
                 body.truncate(content_length);
-                return Some(body);
+                let path = head.lines().next()?.split_whitespace().nth(1)?.to_string();
+                return Some((path, body));
             }
         }
     }
@@ -515,27 +527,27 @@ mod fetch {
     }
 
     #[tokio::test(flavor = "multi_thread")]
-    async fn static_fetch_matches_the_python() {
+    async fn static_fetch_uses_legacy_per_key_and_decrypts_the_fixture() {
         let d = fixture("reports/fetch.json");
         let scenario = &d["static"];
-        let replies: Vec<Vec<Value>> = scenario["replies"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .map(|call| call.as_array().unwrap().to_vec())
-            .collect();
-        let (origin, server) = start(replies).await;
-        let http = Http::new(Duration::from_secs(10)).unwrap();
-        let account = FakeAccount { http };
         let keys: Vec<KeyPair> = scenario["keys"]
             .as_array()
             .unwrap()
             .iter()
             .map(|k| KeyPair::from_b64(k.as_str().unwrap()).unwrap())
             .collect();
+        let replies = keys.iter().map(|key| {
+            scenario["replies"][0].as_array().unwrap().iter()
+                .filter(|report| report["hashed"].as_str() == Some(key.hashed_adv_key_b64().as_str()))
+                .cloned().collect()
+        }).collect();
+        let (origin, server) = start(replies).await;
+        let http = Http::new(Duration::from_secs(10)).unwrap();
+        let account = FakeAccount { http };
         let now = apple_core::reports::keys::parse_iso(scenario["now"].as_str().unwrap()).unwrap();
         let client = ReportClient::new(&account)
             .with_endpoint(format!("{origin}/findmyservice/v2/fetch"))
+            .with_legacy_endpoint(format!("{origin}/acsnservice/fetch"))
             .with_clock(move || now);
 
         let results = client.fetch_key_history(&keys).await.unwrap();
@@ -544,6 +556,43 @@ mod fetch {
             check_reports(reports_json(result), &scenario["reports"][id.as_str()], &id, now.unix_timestamp());
         }
         let calls = server.calls.lock().await.clone();
-        check_calls(&calls, &scenario["calls"], "static");
+        assert_eq!(calls.len(), keys.len());
+        for (call, key) in calls.iter().zip(&keys) {
+            assert_eq!(call[0]["ids"], json!([key.hashed_adv_key_b64()]));
+            assert_eq!(call[0]["startDate"], (now - time::Duration::days(7)).unix_timestamp() * 1000);
+        }
+        assert!(server.paths.lock().await.iter().all(|p| p == "/acsnservice/fetch"));
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn static_fetch_does_not_hide_server_failures_as_empty_history() {
+        let scenario = fixture("reports/fetch.json");
+        let key = KeyPair::from_b64(scenario["static"]["keys"][0].as_str().unwrap()).unwrap();
+        for status in [401, 429, 503] {
+            let (origin, _) = start_with_status(Vec::new(), status).await;
+            let account = FakeAccount { http: Http::new(Duration::from_secs(10)).unwrap() };
+            let result = ReportClient::new(&account)
+                .with_legacy_endpoint(format!("{origin}/acsnservice/fetch"))
+                .fetch_key_history(&[key.clone()]).await;
+            match (status, result) {
+                (401, Err(apple_core::error::Error::Authentication(_)))
+                | (429, Err(apple_core::error::Error::Throttled(_)))
+                | (503, Err(apple_core::error::Error::Backend(_))) => {}
+                (status, result) => panic!("HTTP {status} was hidden or misclassified: {result:?}"),
+            }
+        }
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn static_success_with_no_reports_remains_a_valid_empty_result() {
+        let scenario = fixture("reports/fetch.json");
+        let key = KeyPair::from_b64(scenario["static"]["keys"][0].as_str().unwrap()).unwrap();
+        let (origin, _) = start(Vec::new()).await;
+        let account = FakeAccount { http: Http::new(Duration::from_secs(10)).unwrap() };
+        let results = ReportClient::new(&account)
+            .with_legacy_endpoint(format!("{origin}/acsnservice/fetch"))
+            .fetch_key_history(&[key]).await.unwrap();
+        assert_eq!(results.len(), 1);
+        assert!(results[0].1.reports.is_empty());
     }
 }

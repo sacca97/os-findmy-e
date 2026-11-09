@@ -2,6 +2,8 @@ package com.sacca.openfinder.ui.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -24,13 +26,17 @@ import androidx.compose.ui.unit.dp
 import com.sacca.openfinder.domain.Accessory
 import com.sacca.openfinder.domain.OpenFinderError
 import java.time.Instant
+import androidx.compose.ui.res.stringResource
+import com.sacca.openfinder.R
 
-/** Track window options, mirroring the vendor app's track menu; the fetch window covers all of them (7 days). */
-enum class HistoryWindow(val label: String, val duration: java.time.Duration) {
-    H6("6 h", java.time.Duration.ofHours(6)),
-    H24("24 h", java.time.Duration.ofHours(24)),
-    D3("3 d", java.time.Duration.ofDays(3)),
-    D7("7 d", java.time.Duration.ofDays(7)),
+/** Windows over the locally accumulated trail, ending at its last sighting. */
+enum class HistoryWindow(val label: Int, val duration: java.time.Duration) {
+    H6(R.string.history_6h, java.time.Duration.ofHours(6)),
+    H24(R.string.history_24h, java.time.Duration.ofHours(24)),
+    D3(R.string.history_3d, java.time.Duration.ofDays(3)),
+    D7(R.string.history_7d, java.time.Duration.ofDays(7)),
+    D30(R.string.history_30d, java.time.Duration.ofDays(30)),
+    D90(R.string.history_90d, java.time.Duration.ofDays(90)),
 }
 
 /** Content of the draggable bottom sheet: header, state banners and the accessory list. */
@@ -53,6 +59,7 @@ fun AccessorySheet(
     rekeyCheck: (@Composable () -> Unit)? = null,
     /** Optional slot under the rekey check: ring + battery for a verified nearby tag (ble/TagTools.kt). */
     tagTools: (@Composable () -> Unit)? = null,
+    historyStorageFailed: Boolean = false,
     historyWindow: java.time.Duration = java.time.Duration.ofHours(6),
     onHistoryWindow: (java.time.Duration) -> Unit = {},
     modifier: Modifier = Modifier,
@@ -75,20 +82,31 @@ fun AccessorySheet(
             if (accessories.size > 1) TextButton(onClick = onFitAll) { Text("Show all") }
         }
         if (accessories.any { it.history.size > 1 }) {
-            // Track window: the same options the fetch window can fill (7 days).
             Row(
-                Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 HistoryWindow.entries.forEach { w ->
                     androidx.compose.material3.FilterChip(
                         selected = historyWindow == w.duration,
                         onClick = { onHistoryWindow(w.duration) },
-                        label = { Text(w.label) },
+                        label = { Text(stringResource(w.label)) },
                     )
                 }
             }
         }
+        val trail = accessories.firstOrNull { it.id == selectedId } ?: accessories.singleOrNull()
+        trail?.history?.lastOrNull()?.let { latest ->
+            val visible = trail.history.count { !it.observedAt.isBefore(latest.observedAt.minus(historyWindow)) }
+            val stamp = java.time.format.DateTimeFormatter.ofPattern("MM-dd HH:mm")
+                .withZone(java.time.ZoneId.systemDefault()).format(latest.observedAt)
+            Text(stringResource(R.string.history_summary, visible, trail.history.size, stamp),
+                Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 2.dp),
+                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        if (historyStorageFailed) Text(stringResource(R.string.history_storage_failed),
+            Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 2.dp),
+            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
         if (error != null) {
             Row(
                 Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 4.dp),

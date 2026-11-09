@@ -32,6 +32,9 @@ import androidx.compose.ui.unit.dp
 import com.sacca.openfinder.ui.account.AccountViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.isActive
 
 private const val SCAN_SECONDS = 10
 /** Re-query the battery when the stored sample is older than this (the vendor queries on connect too). */
@@ -46,10 +49,9 @@ sealed interface TagActionResult {
 }
 
 /**
- * Own-tag, own-control actions over the vendor protocol round 2 (audit-notes.md, 第六轮): `PL`/`ST`
+ * Nearby control actions for an imported tag: `PL`/`ST`
  * ring frames and the `GVBAT` battery query, both plain FEF2 writes on a verified nearby tag.
- * The rekey frames (`PK`/`UPDATE`/`GETTOKEN`) live in [KeyRotation.kt] only (standing-ban revision,
- * user-approved 2026-11-08) — this file still never writes them.
+ * The explicit key-management flow (`PK`/`UPDATE`/`GETTOKEN`) lives in [KeyRotation.kt].
  */
 object TagActions {
     private const val TAG = "TagActions"
@@ -92,8 +94,12 @@ object TagActions {
         session ?: run { Log.i(TAG, "battery: connect failed after retries"); return null }
         try {
             if (!session.write("GVBAT".toByteArray())) { Log.i(TAG, "battery: GVBAT rejected"); return null }
-            val raw = session.awaitNotification(3000) ?: return null
-            return BatterySample(tag.hashB64, raw)
+            val deadline = android.os.SystemClock.elapsedRealtime() + 3000
+            while (android.os.SystemClock.elapsedRealtime() < deadline) {
+                val raw = session.awaitNotification((deadline - android.os.SystemClock.elapsedRealtime()).coerceAtLeast(1)) ?: return null
+                if (GvBat.decode(raw) != null) return BatterySample(tag.hashB64, raw)
+            }
+            return null
         } finally {
             session.close()
         }
@@ -101,17 +107,23 @@ object TagActions {
 }
 
 /**
- * The two candidate scales for a 2-byte `GVBAT` sample (calibration pending, audit-notes 第六轮):
- * big-endian/4 and little-endian/2, in volts. Pure function so the readout is unit-testable.
+ * Vendor AOT handleValue (0x832ca0 / closure 0x8337cc): [0x3d, status], not a 16-bit ADC value.
+ * Untagged Dart constants are 0x20/0x60/0xa0; GDT[cid=60] is integer equality.
+ * These select power4/3/2.png. The vendor falls back to power1.png for every other status;
+ * accept the matching 0xe0 code as one bar and leave unrecognised statuses explicitly unknown.
  */
 object GvBat {
-    fun candidates(sample: ByteArray): Pair<Double, Double>? {
-        if (sample.size < 2) return null
-        val be = ((sample[0].toInt() and 0xFF) shl 8) or (sample[1].toInt() and 0xFF)
-        val le = ((sample[1].toInt() and 0xFF) shl 8) or (sample[0].toInt() and 0xFF)
-        // The raw sample reads in quarter-millivolts (be) / half-millivolts (le): 0x3d20 → 3912 mV (be) or 4126.5 mV (le).
-        return Pair(be / 4000.0, le / 2000.0)
+    data class Reading(val status: Int, val bars: Int?)
+    fun decode(sample: ByteArray): Reading? {
+        if (sample.size != 2 || sample[0] != 0x3d.toByte()) return null
+        val status = sample[1].toInt() and 0xff
+        return Reading(status, when (status) { 0x20 -> 4; 0x60 -> 3; 0xa0 -> 2; 0xe0 -> 1; else -> null })
     }
+
+    fun fromHex(raw: String): Reading? = runCatching {
+        if (raw.length != 4) return null
+        decode(raw.chunked(2).map { it.toInt(16).toByte() }.toByteArray())
+    }.getOrNull()
 }
 
 /** Ring / battery / key-rotation tools for the verified nearby tag; expects static keys imported. */
@@ -141,19 +153,22 @@ fun TagToolsSection(accountVm: AccountViewModel, modifier: Modifier = Modifier) 
         } else message = context.getString(R.string.msg_perm_needed)
     }
 
-    /** One line per stale rule: the standing battery status rendered above the buttons. */
-    suspend fun statusLine(expected: Set<String>): String? {
+    /** Freshness belongs to the sample, not to the latest remote location query. */
+    suspend fun statusLine(expected: Set<String>): String {
         val mine = BatteryStore.load(context).filter { it.hashB64 in expected }.maxByOrNull { it.atMs }
-            ?: return null
-        val bytes = mine.rawHex.chunked(2).map { it.toInt(16).toByte() }.toByteArray()
-        val volts = GvBat.candidates(bytes)?.let { (be, le) -> " ≈ %.2f/%.2f V".format(be, le) } ?: ""
-        val age = (System.currentTimeMillis() - mine.atMs) / 3_600_000
+            ?: return context.getString(R.string.battery_unknown)
+        val bars = GvBat.fromHex(mine.rawHex)?.bars
+        val ageMs = (System.currentTimeMillis() - mine.atMs).coerceAtLeast(0)
+        val age = ageMs / 60_000
         val ageText = when {
             age < 1 -> context.getString(R.string.battery_age_now)
-            age < 48 -> context.getString(R.string.battery_age_hours, age)
-            else -> context.getString(R.string.battery_age_days, age / 24)
+            age < 60 -> context.getString(R.string.battery_age_minutes, age)
+            age < 2880 -> context.getString(R.string.battery_age_hours, age / 60)
+            else -> context.getString(R.string.battery_age_days, age / 1440)
         }
-        return context.getString(R.string.battery_status, mine.rawHex.uppercase(), volts, ageText)
+        val level = bars?.let { context.getString(R.string.battery_bars, it) } ?: context.getString(R.string.battery_level_unknown)
+        val freshness = if (ageMs > STALE_MS) context.getString(R.string.battery_stale) else context.getString(R.string.battery_nearby)
+        return context.getString(R.string.battery_status, level, ageText, freshness)
     }
 
     suspend fun expectedKeys(): Set<String>? {
@@ -165,10 +180,10 @@ fun TagToolsSection(accountVm: AccountViewModel, modifier: Modifier = Modifier) 
     LaunchedEffect(Unit) {
         val expected = accountVm.staticKeyHashes().toSet()
         if (expected.isEmpty()) return@LaunchedEffect
-        batteryStatus = statusLine(expected)
+        batteryStatus = runCatching { statusLine(expected) }.getOrElse { context.getString(R.string.battery_storage_failed) }
         // The vendor app queries the battery on connect; mirror that: silently refresh an expired
         // sample whenever the app opens (no permission prompts from the auto path).
-        val mine = BatteryStore.load(context).filter { it.hashB64 in expected }.maxByOrNull { it.atMs }
+        val mine = runCatching { BatteryStore.load(context) }.getOrDefault(emptyList()).filter { it.hashB64 in expected }.maxByOrNull { it.atMs }
         if ((mine == null || System.currentTimeMillis() - mine.atMs > STALE_MS) && !needsPermissions() && busy == null) {
             busy = context.getString(R.string.busy_battery)
             try {
@@ -177,8 +192,13 @@ fun TagToolsSection(accountVm: AccountViewModel, modifier: Modifier = Modifier) 
                     BatteryStore.save(context, BatteryStore.Sample(sample.hashB64, sample.raw.joinToString("") { "%02x".format(it) }, System.currentTimeMillis()))
                     batteryStatus = statusLine(expected)
                 }
-            } catch (_: Exception) { /* standing status: a failed auto-refresh stays quiet */ }
-            busy = null
+            } catch (e: CancellationException) { throw e
+            } catch (_: Exception) { /* Keep the last sampled time when the tag is not nearby. */
+            } finally { busy = null }
+        }
+        while (currentCoroutineContext().isActive) {
+            delay(60_000)
+            batteryStatus = runCatching { statusLine(expected) }.getOrElse { context.getString(R.string.battery_storage_failed) }
         }
     }
 
@@ -216,20 +236,29 @@ fun TagToolsSection(accountVm: AccountViewModel, modifier: Modifier = Modifier) 
                 } else {
                     BatteryStore.save(context, BatteryStore.Sample(sample.hashB64, sample.raw.joinToString("") { "%02x".format(it) }, System.currentTimeMillis()))
                     batteryStatus = statusLine(expected)
-                    val (be, le) = GvBat.candidates(sample.raw) ?: return@launch
-                    message = context.getString(R.string.msg_battery_sample,
-                        sample.raw.joinToString("") { "%02x".format(it) }.uppercase(), be, le)
+                    val bars = GvBat.decode(sample.raw)?.bars
+                    val level = bars?.let { context.getString(R.string.battery_bars, it) } ?: context.getString(R.string.battery_level_unknown)
+                    val stamp = java.time.format.DateTimeFormatter.ofPattern("MM-dd HH:mm")
+                        .withZone(java.time.ZoneId.systemDefault())
+                    val recent = BatteryStore.load(context).filter { it.hashB64 == sample.hashB64 }.takeLast(5)
+                        .joinToString("\n") { s ->
+                            val b = GvBat.fromHex(s.rawHex)?.bars
+                            val label = b?.let { context.getString(R.string.battery_bars, it) } ?: context.getString(R.string.battery_level_unknown)
+                            "${stamp.format(java.time.Instant.ofEpochMilli(s.atMs))} · $label"
+                        }
+                    message = context.getString(R.string.msg_battery_sample, level) + "\n\n" + recent
                 }
+            } catch (e: CancellationException) { throw e
             } catch (e: Exception) {
-                message = "${context.getString(R.string.action_battery)}: ${e.message}"
+                message = context.getString(R.string.battery_storage_failed)
             } finally {
                 busy = null
             }
         }
     }
 
-    /** Exports the fresh keypair for the PC tooling (fetch-mtag.sh). Failure is LOUD in logcat — a
-     *  silently lost export once left the PC querying a burned key (2026-11-08 reclaim incident). */
+    /** Exports the current keypair for local PC tooling; report failures so both clients keep
+     *  querying the key that the tag currently advertises. */
     fun exportForPc(context: Context, json: String) {
         val primary = java.io.File(context.getExternalFilesDir(null), "mtag-keypair.json")
         val target = try {
