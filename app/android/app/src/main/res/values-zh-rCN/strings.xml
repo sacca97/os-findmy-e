@@ -1,0 +1,64 @@
+<resources>
+    <string name="app_name">OpenFinder</string>
+    <string name="worker_login_title">重新登录</string>
+    <string name="worker_login_text">Apple 会话已过期。打开 OpenFinder 重新登录。</string>
+    <string name="worker_location_title">Tag 有新位置</string>
+
+    <!-- Tag 工具（ble/TagTools.kt） -->
+    <string name="action_ring">响铃</string>
+    <string name="action_battery">电量</string>
+    <string name="action_rotate">轮换钥匙</string>
+    <string name="action_reclaim">夺回</string>
+    <string name="busy_ringing">正在响铃…</string>
+    <string name="busy_battery">正在读电量…</string>
+    <string name="busy_rotating">正在轮换…</string>
+    <string name="msg_no_keys">还没有导入静态钥——请先导入。</string>
+    <string name="msg_perm_granted">权限已授予——请再点一次操作。</string>
+    <string name="msg_perm_needed">蓝牙操作需要"附近设备"和"位置信息"权限。</string>
+    <string name="msg_ring_done">完成——Tag 已响铃。</string>
+    <string name="msg_ring_not_heard">10 秒内没听到 Tag（附近有其他 Find My 设备）。晃一晃 Tag 再试。</string>
+    <string name="msg_nothing_heard">什么都没听到——晃一晃 Tag，保持 1 米内再试。</string>
+    <string name="msg_connect_failed">听到了但连接失败——再试一次。</string>
+    <string name="msg_ring_rejected">已连接，但 Tag 拒绝了响铃命令。</string>
+    <string name="msg_battery_none">没有响应——把 Tag 放到 1 米内再试。</string>
+    <string name="msg_battery_sample">电量：%1$s。采用厂商档位，不代表精确百分比。最近近距采样：</string>
+    <string name="msg_rotate_done">轮换成功 ✓ 新钥 %1$s…</string>
+    <string name="msg_rotate_unverified">⚠ 命令已接受，但还没听到新钥广播——再次轮换前请先扫描确认。</string>
+    <string name="msg_rotate_not_owned">信号不够强（附近有其他 Find My 设备）。把 Tag 放到 1 米内。</string>
+    <string name="msg_rotate_rejected">⚠ Tag 拒绝了 %1$s 步骤——轮换未生效。</string>
+    <string name="msg_rotation_failed">轮换失败：%1$s</string>
+    <string name="dlg_rotate_title">轮换钥匙？</string>
+    <string name="dlg_rotate_text">向附近的 Tag 写入新钥（它会蜂鸣一声），并移除旧钥。此操作用于近距离密钥管理，无法远程恢复丢失的 Tag。</string>
+    <string name="dlg_reclaim_title">夺回附近的 Tag？</string>
+    <string name="dlg_reclaim_text">不校验钥匙：把我们的新钥写入最近的 Find My 格式 Tag（它会蜂鸣）。仅在钥匙被第三方写走时使用——其他情况请用"轮换"。</string>
+    <string name="dlg_confirm">确认</string>
+    <string name="dlg_cancel">取消</string>
+    <string name="battery_age_now">刚刚</string>
+    <string name="battery_age_minutes">%1$d 分钟前</string>
+    <string name="battery_age_hours">%1$d 小时前</string>
+    <string name="battery_age_days">%1$d 天前</string>
+    <string name="battery_status">电量 %1$s · %2$s · %3$s</string>
+    <string name="battery_bars">%1$d/4 格</string>
+    <string name="battery_unknown">电量未知 · 请靠近 Tag 读取</string>
+    <string name="battery_level_unknown">状态码暂未识别</string>
+    <string name="battery_stale">已过期，需近距更新</string>
+    <string name="battery_nearby">近距采样</string>
+    <string name="battery_storage_failed">电量历史读取或保存失败，请重试。</string>
+
+    <!-- 设置对话框（ui/map/MapScreen.kt） -->
+    <string name="settings_done">完成</string>
+    <string name="settings_title">设置</string>
+    <string name="settings_account">Apple 账号…</string>
+    <string name="settings_clear_cache">清除本地定位轨迹</string>
+    <string name="history_6h">6 小时</string>
+    <string name="history_24h">24 小时</string>
+    <string name="history_3d">3 天</string>
+    <string name="history_7d">7 天</string>
+    <string name="history_30d">30 天</string>
+    <string name="history_90d">90 天</string>
+    <string name="history_summary">显示 %1$d 个定位点 · 已存 %2$d 个 · 截至 %3$s</string>
+    <string name="history_storage_failed">本地轨迹保存或恢复失败，请重试以保留重启后的轨迹。</string>
+    <string name="history_retention">轨迹加密保存在本机，每个 Tag 最多保留 90 天或 1 万个点；最后已知位置持续保留。退出账号会清除轨迹。后台约每 30 分钟查询一次，系统节电可能推迟；新位置取决于附近 Apple 设备的上报。</string>
+    <string name="settings_selftest">Anisette 自检（调试）</string>
+    <string name="settings_version">版本 %1$s</string>
+</resources>

@@ -32,7 +32,7 @@ use apple_core::login::device::{LoginEndpoints, LoginResult, LoginState, SecondF
 use apple_core::keychain::session::KeychainSession;
 use apple_core::login::{AnisetteSource, BoxFuture};
 use apple_core::reports::client::{AccountContext, ReportClient};
-use apple_core::reports::keys::AccessoryKeys;
+use apple_core::reports::keys::{AccessoryKeys, KeyPair};
 use apple_core::session::{OpenFinderSession, LoginConfig};
 use base64::Engine as _;
 use serde_json::{json, Value};
@@ -429,6 +429,52 @@ async fn dispatch(handle: &Handle, request: &str) -> Result<Value> {
                     "accessory": accessory.to_json(),
                 }));
             }
+            Ok(with_state(handle, json!({"ok": true, "results": out})).await)
+        }
+        // Static single-key tags (Find My-style fixed public key): no keychain, no rolling keys.
+        // Parses the host's keypair JSON array and reports each key's identity — no network.
+        "static_keys_info" => {
+            let entries = req.get("keys").and_then(|v| v.as_array()).cloned().unwrap_or_default();
+            let mut out = Vec::new();
+            for entry in &entries {
+                let key = KeyPair::from_json(entry).map_err(|e| Error::State(e.to_string()))?;
+                out.push(json!({
+                    "hashed_adv_key_b64": key.hashed_adv_key_b64(),
+                    "name": key.name(),
+                }));
+            }
+            Ok(json!({"ok": true, "keys": out}))
+        }
+        // CONTACTS APPLE: one batched `fetch` over the given static keys, decrypted with each key itself.
+        "fetch_key_reports" => {
+            let entries = req.get("keys").and_then(|v| v.as_array()).cloned().unwrap_or_default();
+            let client = ReportClient::new(session.account() as &dyn AccountContext);
+            let mut keys = Vec::new();
+            for entry in &entries {
+                keys.push(KeyPair::from_json(entry).map_err(|e| Error::State(e.to_string()))?);
+            }
+            let results = client.fetch_key_history(&keys).await?;
+            let out: Vec<Value> = results
+                .iter()
+                .map(|(key, result)| {
+                    let reports: Vec<Value> = result
+                        .reports
+                        .iter()
+                        .map(|r| json!({
+                            "lat": r.latitude, "lon": r.longitude,
+                            "observed_at": r.observed_at.unix_timestamp(),
+                            "accuracy": r.horizontal_accuracy_meters,
+                        }))
+                        .collect();
+                    json!({
+                        "hashed_adv_key_b64": key.hashed_adv_key_b64(),
+                        "name": key.name(),
+                        "reports": reports,
+                        "requests": result.requests,
+                        "undecryptable": result.undecryptable, "invalid": result.invalid,
+                    })
+                })
+                .collect();
             Ok(with_state(handle, json!({"ok": true, "results": out})).await)
         }
         "recovery_options" => {

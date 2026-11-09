@@ -40,6 +40,8 @@ data class Accessory(
     val name: String,
     val type: AccessoryType = AccessoryType.OTHER,
     val latestReport: LocationReport? = null,
+    /** Locally accumulated sightings, oldest first; the last one is [latestReport]. */
+    val history: List<LocationReport> = emptyList(),
 )
 
 sealed interface AuthState {

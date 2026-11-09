@@ -12,6 +12,12 @@ NDK=${NDK:?set NDK to the Android NDK directory}
 API=${API:-24}
 tc=$NDK/toolchains/llvm/prebuilt/linux-x86_64
 abis=${*:-"arm64-v8a x86_64"}
+
+# bindgen uses system libclang, whose builtin headers are missing on this box (no
+# libc6-dev / libclang-common-21-dev), and the bionic sysroot has no stdbool.h/
+# stdarg.h/stddef.h/float.h either (bionic delegates those to the compiler resource
+# dir). Point bindgen at the NDK clang's resource headers instead.
+clang_res=$(ls -d "$tc"/lib/clang/*/include | head -1)
 for abi in $abis; do
   case $abi in
     arm64-v8a) triple=aarch64-linux-android; rt=aarch64_linux_android; arch=aarch64;;
@@ -30,7 +36,11 @@ for abi in $abis; do
   builtins=$(ls "$tc"/lib/clang/*/lib/linux/libclang_rt.builtins-$arch-android.a | head -1)
   export "CARGO_TARGET_$(echo $rt | tr a-z A-Z)_LINKER=$tc/bin/$triple$API-clang"
   export "CARGO_TARGET_$(echo $rt | tr a-z A-Z)_RUSTFLAGS=-L native=$stub -C link-arg=$builtins -C link-arg=-Wl,-z,max-page-size=16384"
-  export "BINDGEN_EXTRA_CLANG_ARGS_$rt=--sysroot=$tc/sysroot"
+  export "BINDGEN_EXTRA_CLANG_ARGS_$rt=--sysroot=$tc/sysroot -I$clang_res"
+  # bindgen resolves the env var against $TARGET (cargo sets it for build scripts),
+  # which prefers the target-suffixed variant above; keep the unsuffixed one in sync
+  # for host-side bindgen (plain cargo test runs).
+  export BINDGEN_EXTRA_CLANG_ARGS="--sysroot=$tc/sysroot -I$clang_res"
 
   # The workspace target directory is native/target, not the member's.
   (cd "$here/../adi-core" && cargo build --release --features jni --target "$triple")

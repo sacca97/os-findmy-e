@@ -19,6 +19,9 @@ use crate::reports::payload::{DecryptedReport, EncryptedReport};
 use crate::util::{b64, b64_decode};
 
 pub const ENDPOINT: &str = "https://gateway.icloud.com/findmyservice/v2/fetch";
+/// Static keys need this path: live A/B/A checks found v2 repeatedly returning yesterday's
+/// valid reports while this endpoint returned newly generated reports for the exact same key.
+pub const LEGACY_ENDPOINT: &str = "https://gateway.icloud.com/acsnservice/fetch";
 pub const MAX_IDS: usize = 290;
 /// The User-Agent the report fetch sends. The validated Python sends aiohttp's default; the plan's choice is
 /// the AuthKit one, overridable if Apple's edge refuses it (`with_user_agent`).
@@ -103,6 +106,7 @@ type Clock = Box<dyn Fn() -> OffsetDateTime + Send + Sync>;
 pub struct ReportClient<'a> {
     account: &'a dyn AccountContext,
     endpoint: String,
+    legacy_endpoint: String,
     window: TimeDuration,
     clock: Clock,
     /// A hard cap on the number of `fetch` requests one rolling-key walk may send. `None` matches the
@@ -117,6 +121,7 @@ impl<'a> ReportClient<'a> {
         ReportClient {
             account,
             endpoint: ENDPOINT.to_string(),
+            legacy_endpoint: LEGACY_ENDPOINT.to_string(),
             window: TimeDuration::days(7),
             clock: Box::new(OffsetDateTime::now_utc),
             max_requests: None,
@@ -138,6 +143,11 @@ impl<'a> ReportClient<'a> {
 
     pub fn with_endpoint(mut self, endpoint: impl Into<String>) -> Self {
         self.endpoint = endpoint.into();
+        self
+    }
+
+    pub fn with_legacy_endpoint(mut self, endpoint: impl Into<String>) -> Self {
+        self.legacy_endpoint = endpoint.into();
         self
     }
 
@@ -300,22 +310,17 @@ impl<'a> ReportClient<'a> {
         Ok(out)
     }
 
-    /// One `fetch` entry per key, all as primary ids, decrypted with the key itself.
+    /// One legacy search per static key, decrypted with the key itself. Do not rely on
+    /// a successful v2 response to mean the static key's reports are up to date.
     pub async fn fetch_key_history(&self, keys: &[KeyPair]) -> Result<Vec<(KeyPair, ReportFetchResult)>> {
         if keys.is_empty() {
             return Ok(Vec::new());
         }
         let now = (self.clock)();
-        let devices: Vec<KeyIds> = keys
-            .iter()
-            .map(|k| KeyIds { primary: vec![k.hashed_adv_key_b64()], secondary: Vec::new() })
-            .collect();
-        let raw = match self.fetch_raw_or_empty(&devices).await {
-            Ok(raw) => raw,
-            Err(FetchFailure::Empty) | Err(FetchFailure::Error(_)) => Vec::new(),
-        };
         let mut out = Vec::new();
         for key in keys {
+            // Propagate transport/authentication failures; they are not "no new reports".
+            let raw = self.fetch_static_raw(key).await?;
             let id = key.name().unwrap_or(&key.hashed_adv_key_b64()).to_string();
             let mut found: Vec<DecryptedReport> = Vec::new();
             let mut undecryptable = 0;
@@ -330,7 +335,7 @@ impl<'a> ReportClient<'a> {
             let mapped: Vec<LocationReport> = found
                 .into_iter()
                 .map(|r| self.to_domain(&r, &id, key.key_type()))
-                .filter(|r| r.is_valid(now))
+                .filter(|r| r.is_valid(now) && r.observed_at >= now - self.window)
                 .collect();
             let invalid = sorted_len - mapped.len();
             out.push((
@@ -345,6 +350,27 @@ impl<'a> ReportClient<'a> {
             ));
         }
         Ok(out)
+    }
+
+    async fn fetch_static_raw(&self, key: &KeyPair) -> Result<Vec<EncryptedReport>> {
+        let now = (self.clock)();
+        let body = json!({"search": [{
+            "startDate": (now - self.window).unix_timestamp() * 1000,
+            "ids": [key.hashed_adv_key_b64()],
+        }]}).to_string();
+        let fetch = async {
+            let mut answer = self.post_to(&self.legacy_endpoint, &body).await?;
+            if answer.code == 401 && self.account.refresh_session().await.is_ok() {
+                answer = self.post_to(&self.legacy_endpoint, &body).await?;
+            }
+            self.parse_legacy(&answer)
+        }.await;
+        match fetch {
+            Ok(raw) => Ok(raw),
+            Err(FetchFailure::Empty) => Err(Error::ReportsUnavailable(
+                "Apple answered the static-key report request with an empty body repeatedly.".into())),
+            Err(FetchFailure::Error(error)) => Err(error),
+        }
     }
 
     /// The raw call: one request (plus empty-body retries) for `devices`, undecrypted.
@@ -399,6 +425,10 @@ impl<'a> ReportClient<'a> {
 
     /// One POST, retrying an empty 200 up to 5 times at 2, 4, ... 10 s (FindMy.py#185).
     async fn post(&self, body: &str) -> std::result::Result<Answer, FetchFailure> {
+        self.post_to(&self.endpoint, body).await
+    }
+
+    async fn post_to(&self, endpoint: &str, body: &str) -> std::result::Result<Answer, FetchFailure> {
         let token = self
             .account
             .service_token("searchPartyToken")
@@ -408,7 +438,7 @@ impl<'a> ReportClient<'a> {
         let authorization = basic_auth(&dsid, &token);
         let mut retry = 1u32;
         loop {
-            let answer = self.send(body, &authorization).await?;
+            let answer = self.send(endpoint, body, &authorization).await?;
             if answer.code != 200 || !answer.body.trim().is_empty() {
                 return Ok(answer);
             }
@@ -420,7 +450,7 @@ impl<'a> ReportClient<'a> {
         }
     }
 
-    async fn send(&self, body: &str, authorization: &str) -> std::result::Result<Answer, FetchFailure> {
+    async fn send(&self, endpoint: &str, body: &str, authorization: &str) -> std::result::Result<Answer, FetchFailure> {
         let headers = self.account.anisette_headers().await.map_err(FetchFailure::Error)?;
         let mut request_headers: Vec<(String, String)> =
             vec![("Authorization".into(), authorization.into()), ("Content-Type".into(), "application/json".into())];
@@ -435,7 +465,7 @@ impl<'a> ReportClient<'a> {
             .http()
             .send(
                 reqwest::Method::POST,
-                &self.endpoint,
+                endpoint,
                 &request_headers,
                 Some(body.as_bytes().to_vec()),
                 None,
@@ -446,6 +476,32 @@ impl<'a> ReportClient<'a> {
             code: response.status,
             body: response.text(),
             retry_after: response.headers.get("Retry-After").and_then(|v| v.to_str().ok()).map(str::to_string),
+        })
+    }
+
+    fn parse_legacy(&self, answer: &Answer) -> std::result::Result<Vec<EncryptedReport>, FetchFailure> {
+        if answer.code != 200 {
+            return self.parse(answer);
+        }
+        let json: Value = serde_json::from_str(&answer.body).map_err(|_| {
+            FetchFailure::Error(Error::Backend("Apple's static-key report answer is not JSON.".into()))
+        })?;
+        let status = json.get("statusCode").cloned().unwrap_or(Value::Null);
+        let success = status.as_str() == Some("200") || status.as_u64() == Some(200);
+        let entries = if success {
+            json.get("results").and_then(Value::as_array).ok_or_else(|| {
+                FetchFailure::Error(Error::Backend("Unexpected static-key report answer shape.".into()))
+            })?.iter().map(|entry| json!({
+                "id": entry.get("id"), "locationInfo": [entry.get("payload")],
+            })).collect::<Vec<_>>()
+        } else {
+            Vec::new()
+        };
+        // Reuse the v2 status/encoding validation and AES-GCM report representation.
+        self.parse(&Answer {
+            code: answer.code,
+            body: json!({"acsnLocations": {"statusCode": status, "locationPayload": entries}}).to_string(),
+            retry_after: answer.retry_after.clone(),
         })
     }
 

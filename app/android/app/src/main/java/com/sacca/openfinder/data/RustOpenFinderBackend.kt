@@ -87,15 +87,55 @@ class RustOpenFinderBackend(
 
     override suspend fun getAccessories(): List<Accessory> = onNative {
         requireSignedIn()
-        loadTags().map { it.toAccessory() }
+        val rolling = loadTags().map { it.toAccessory() }
+        val static = loadStaticKeys()
+        if (static.isEmpty()) return@onNative rolling
+        // The static tag's stable id is its hashed advertising key, derived natively from the private key.
+        val req = JSONArray().also { a -> static.forEach(a::put) }
+        val reply = call(JSONObject().put("cmd", "static_keys_info").put("keys", req), touchesApple = false)
+        val infos = reply.getJSONArray("keys")
+        rolling + List(infos.length()) { i ->
+            val o = infos.getJSONObject(i)
+            val name = if (o.isNull("name")) "Static tag" else o.optString("name").ifBlank { "Static tag" }
+            Accessory(id = o.getString("hashed_adv_key_b64"), name = name)
+        }
     }
 
     override suspend fun fetchReports(accessoryIds: List<String>): List<LocationReport> = onNative {
         requireSignedIn()
+        val wanted = accessoryIds.toSet()
         val tags = loadTags()
-        val wanted = JSONArray().also { arr -> tags.filter { it.id in accessoryIds }.forEach { arr.put(it.json) } }
-        if (wanted.length() == 0) return@onNative emptyList()
-        val reply = call(JSONObject().put("cmd", "fetch_reports").put("accessories", wanted), touchesApple = true)
+        val staticKeys = loadStaticKeys()
+        val out = ArrayList<LocationReport>()
+        var firstError: OpenFinderException? = null
+        // Rolling and static legs run through different Apple calls; one leg failing must not
+        // take the reports of the other down with it (an error surfaces only when nothing fetched).
+        val rollingWanted = tags.filter { it.id in wanted }.map { it.json }
+        if (rollingWanted.isNotEmpty()) {
+            try { out += withSessionRenewal { fetchRollingReports(rollingWanted, tags) } } catch (e: OpenFinderException) { firstError = e }
+        }
+        if (staticKeys.isNotEmpty()) {
+            try { out += withSessionRenewal { fetchStaticReports(staticKeys, wanted) } } catch (e: OpenFinderException) { firstError = firstError ?: e }
+        }
+        if (out.isEmpty()) firstError?.let { throw it }
+        out
+    }
+
+    /** CONTACTS APPLE: one attempt to renew the Apple session without a password (Rust `refresh`). The
+     *  passwordless-session path is unverified upstream — when it can't renew, the error propagates. */
+    private fun renewSession() {
+        call(JSONObject().put("cmd", "refresh"), touchesApple = true)
+    }
+
+    /** Runs [block]; on Apple's HTTP 401 renews the session once and retries [block] a single time. */
+    private fun <T> withSessionRenewal(block: () -> T): T = try {
+        block()
+    } catch (e: OpenFinderException) {
+        if ((e.error as? OpenFinderError.Rejected)?.http == 401) { renewSession(); block() } else throw e
+    }
+
+    private fun fetchRollingReports(wanted: List<JSONObject>, tags: List<Tag>): List<LocationReport> {        val arr = JSONArray().also { a -> wanted.forEach(a::put) }
+        val reply = call(JSONObject().put("cmd", "fetch_reports").put("accessories", arr), touchesApple = true)
         val results = reply.getJSONArray("results")
         val out = ArrayList<LocationReport>()
         val updated = tags.associate { it.id to it.json }.toMutableMap()
@@ -103,22 +143,45 @@ class RustOpenFinderBackend(
             val r = results.getJSONObject(i)
             val id = r.getString("id")
             r.optJSONObject("accessory")?.let { updated[id] = it }        // keeps the rolling-key alignment current
-            val reports = r.getJSONArray("reports")
-            for (j in 0 until reports.length()) {
-                val rep = reports.getJSONObject(j)
-                out += LocationReport(
-                    accessoryId = id,
-                    latitude = rep.getDouble("lat"), longitude = rep.getDouble("lon"),
-                    observedAt = Instant.ofEpochSecond(rep.getLong("observed_at")),
-                    horizontalAccuracyMeters = if (rep.isNull("accuracy")) null else rep.getDouble("accuracy"),
-                )
-            }
+            out += parseReports(r.getJSONArray("reports"), id)
         }
         saveTags(updated.values.toList())
-        out
+        return out
     }
 
-    /** Signs out and forgets the accessories' keys. The machine stays: Apple allows one provisioning per device id. */
+    /** One batched `fetch_key_reports` call for all static keys; reports are filtered to the requested ids. */
+    private fun fetchStaticReports(keys: List<JSONObject>, wanted: Set<String>): List<LocationReport> {
+        val arr = JSONArray().also { a -> keys.forEach(a::put) }
+        val reply = call(JSONObject().put("cmd", "fetch_key_reports").put("keys", arr), touchesApple = true)
+        val results = reply.getJSONArray("results")
+        val out = ArrayList<LocationReport>()
+        for (i in 0 until results.length()) {
+            val r = results.getJSONObject(i)
+            val id = r.getString("hashed_adv_key_b64")
+            if (com.sacca.openfinder.BuildConfig.DEBUG) android.util.Log.i("StaticFetch",
+                "reports=${r.getJSONArray("reports").length()} selected=${id in wanted} " +
+                    "undecryptable=${r.optInt("undecryptable")} invalid=${r.optInt("invalid")}")
+            if (id in wanted) out += parseReports(r.getJSONArray("reports"), id)
+        }
+        return out
+    }
+
+    private fun parseReports(reports: JSONArray, id: String): List<LocationReport> {
+        val out = ArrayList<LocationReport>(reports.length())
+        for (j in 0 until reports.length()) {
+            val rep = reports.getJSONObject(j)
+            out += LocationReport(
+                accessoryId = id,
+                latitude = rep.getDouble("lat"), longitude = rep.getDouble("lon"),
+                observedAt = Instant.ofEpochSecond(rep.getLong("observed_at")),
+                horizontalAccuracyMeters = if (rep.isNull("accuracy")) null else rep.getDouble("accuracy"),
+            )
+        }
+        return out
+    }
+
+    /** Signs out and forgets the accessories' keys. The machine stays: Apple allows one provisioning per device id.
+     *  The static tag blob is deliberately kept too: those keys are the user's own credentials, re-importing them means another trip to the computer. */
     override suspend fun logout() = onNative {
         secrets.delete(SESSION_FILE)
         secrets.delete(TAGS_FILE)
@@ -129,7 +192,9 @@ class RustOpenFinderBackend(
 
     override suspend fun hasMachine() = onNative { machines.hasMachine() }
 
-    override suspend fun hasAccessories() = onNative { secrets.exists(TAGS_FILE) && loadTags().isNotEmpty() }
+    override suspend fun hasAccessories() = onNative {
+        (secrets.exists(TAGS_FILE) && loadTags().isNotEmpty()) || (secrets.exists(STATIC_FILE) && loadStaticKeys().isNotEmpty())
+    }
 
     override suspend fun needsPassword() = onNative {
         !nativeCall(open(), JSONObject().put("cmd", "status"), touchesApple = false).optBoolean("has_password")
@@ -175,6 +240,56 @@ class RustOpenFinderBackend(
         val arr = try { JSONArray(json) } catch (e: Exception) { throw OpenFinderException(OpenFinderError.Backend("Not a JSON array of accessories.")) }
         saveTags(List(arr.length()) { arr.getJSONObject(it) })
         arr.length()
+    }
+
+    /** Imports static single-key tags: a JSON array of keypairs, or one keypair object. The native side fully
+     *  validates before anything is stored; the keys live in their own encrypted blob so they can never reach
+     *  the rolling-key fetch path. */
+    override suspend fun importStaticKeys(json: String): Int = onNative {
+        val arr = try {
+            if (json.trimStart().startsWith("[")) JSONArray(json) else JSONArray().put(JSONObject(json))
+        } catch (e: Exception) { throw OpenFinderException(OpenFinderError.Backend("Not a JSON array (or a single keypair object) of static tag keys.")) }
+        if (arr.length() == 0) throw OpenFinderException(OpenFinderError.Backend("The file contains no keys."))
+        call(JSONObject().put("cmd", "static_keys_info").put("keys", arr), touchesApple = false)
+        saveStaticKeys(List(arr.length()) { arr.getJSONObject(it) })
+        arr.length()
+    }
+
+    override suspend fun staticKeyHashes(): List<String> = onNative {
+        val keys = loadStaticKeys()
+        if (keys.isEmpty()) return@onNative emptyList()
+        val req = JSONArray().also { a -> keys.forEach(a::put) }
+        val reply = call(JSONObject().put("cmd", "static_keys_info").put("keys", req), touchesApple = false)
+        val infos = reply.getJSONArray("keys")
+        List(infos.length()) { i -> infos.getJSONObject(i).getString("hashed_adv_key_b64") }
+    }
+
+    override suspend fun rotateStaticKeys(newJson: String, oldHashB64: String?): Int = onNative {
+        // Native validation first, exactly like the import path: a bad key must not reach the blob.
+        val arr = try { JSONArray(newJson) } catch (e: Exception) { JSONArray().put(JSONObject(newJson)) }
+        if (arr.length() == 0) throw OpenFinderException(OpenFinderError.Backend("empty rotation payload"))
+        call(JSONObject().put("cmd", "static_keys_info").put("keys", arr), touchesApple = false)
+        val keys = loadStaticKeys().toMutableList()
+        // Keep one active key entry per tag. Match the superseded hash first (multi-tag safe);
+        // fallback for a reclaim after a foreign write: the tag no longer advertises any blob key,
+        // so retire same-named current entries.
+        if (keys.isNotEmpty()) {
+            val existing = JSONArray().also { a -> keys.forEach(a::put) }
+            val infos = call(JSONObject().put("cmd", "static_keys_info").put("keys", existing), touchesApple = false)
+                .getJSONArray("keys")
+            val byHash = List(infos.length()) { i -> infos.getJSONObject(i).getString("hashed_adv_key_b64") }
+            val freshName = arr.getJSONObject(0).optString("name").ifEmpty { "Static tag" }
+            val toRemove = (0 until keys.size).filter { i ->
+                (oldHashB64 != null && byHash.getOrNull(i) == oldHashB64) ||
+                    (oldHashB64 == null && keys[i].optString("name") == freshName)
+            }.ifEmpty {
+                (0 until keys.size).filter { keys[it].optString("name") == freshName }
+            }
+            for (i in toRemove.sortedDescending()) keys.removeAt(i)
+        }
+        for (i in 0 until arr.length()) keys.add(arr.getJSONObject(i))
+        saveStaticKeys(keys)
+        keys.size
     }
 
     /** Opens the library in the background so the first request is not slow; no machine is fine. */
@@ -277,9 +392,12 @@ class RustOpenFinderBackend(
             val m = methods.getJSONObject(i)
             if (m.getString("kind") == "trusted_device") trusted = true else if (sms == null) sms = m.getLong("id")
         }
+        // SMS first: this app runs on Android, so the trusted-device push is only usable
+        // when the user happens to own Apple hardware to read the code on; a trusted
+        // phone number works for everyone. Revisit if a second-factor chooser UI lands.
         val challenge = when {
-            trusted -> { call(JSONObject().put("cmd", "request_trusted_device"), touchesApple = true); TRUSTED_DEVICE }
             sms != null -> { call(JSONObject().put("cmd", "request_sms").put("id", sms), touchesApple = true); "$SMS$sms" }
+            trusted -> { call(JSONObject().put("cmd", "request_trusted_device"), touchesApple = true); TRUSTED_DEVICE }
             else -> throw OpenFinderException(OpenFinderError.Rejected(200, null, "Apple offered no second-factor method."))
         }
         pendingChallenge = challenge
@@ -312,6 +430,16 @@ class RustOpenFinderBackend(
         secrets.write(TAGS_FILE, JSONArray().also { a -> tags.forEach(a::put) }.toString().toByteArray(Charsets.UTF_8))
     }
 
+    private fun loadStaticKeys(): List<JSONObject> {
+        val raw = secrets.read(STATIC_FILE) ?: return emptyList()
+        val arr = try { JSONArray(String(raw, Charsets.UTF_8)) } catch (e: Exception) { return emptyList() }
+        return List(arr.length()) { arr.getJSONObject(it) }
+    }
+
+    private fun saveStaticKeys(keys: List<JSONObject>) {
+        secrets.write(STATIC_FILE, JSONArray().also { a -> keys.forEach(a::put) }.toString().toByteArray(Charsets.UTF_8))
+    }
+
     private fun b64(chars: CharArray): String {
         val bytes = String(chars).toByteArray(Charsets.UTF_8)
         return Base64.getEncoder().encodeToString(bytes).also { bytes.fill(0) }
@@ -320,6 +448,7 @@ class RustOpenFinderBackend(
     private companion object {
         const val SESSION_FILE = "session.enc"
         const val TAGS_FILE = "tags.enc"
+        const val STATIC_FILE = "static_tags.enc"
         const val TRUSTED_DEVICE = "td"
         const val SMS = "sms:"
     }

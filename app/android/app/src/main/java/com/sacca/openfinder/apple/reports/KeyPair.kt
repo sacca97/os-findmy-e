@@ -3,6 +3,7 @@ package com.sacca.openfinder.apple.reports
 import org.json.JSONObject
 import java.math.BigInteger
 import java.security.MessageDigest
+import java.security.SecureRandom
 import java.util.Base64
 
 enum class KeyPairType(val value: Int) {
@@ -53,6 +54,16 @@ class KeyPair(privateKey: ByteArray, val keyType: KeyPairType = KeyPairType.UNKN
 
     companion object {
         private val B64 = Base64.getEncoder()
+
+        /** A fresh static single-key from the platform entropy source (resamples the ~2^-224 invalid scalar). */
+        fun generate(random: SecureRandom = SecureRandom()): KeyPair {
+            while (true) {
+                val bytes = ByteArray(28).also(random::nextBytes)
+                try {
+                    return KeyPair(bytes)
+                } catch (_: IllegalArgumentException) { /* invalid scalar, resample */ }
+            }
+        }
 
         fun fromB64(privateKeyB64: String) = KeyPair(Base64.getDecoder().decode(privateKeyB64))
 

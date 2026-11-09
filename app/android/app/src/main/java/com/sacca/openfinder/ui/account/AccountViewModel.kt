@@ -86,7 +86,29 @@ class AccountViewModel(private val container: AppContainer, private val onChange
         step(AccountStep.Ready(n))
     }
 
-    fun signOut() = run("") { live.logout(); step(currentStep()); onChanged() }
+    /** Imports static single-key tags into their own encrypted blob (never the accessory/rolling-key store). */
+    fun importStaticKeys(json: String) = run("Importing static tag keys…") {
+        val n = setup.importStaticKeys(json)
+        onChanged()
+        step(AccountStep.Ready(n))
+    }
+
+    /** Hashed advertising keys of the imported static tags — the BLE rekey check compares against these. */
+    suspend fun staticKeyHashes(): List<String> = setup.staticKeyHashes()
+
+    /** Persists a nearby rotation result, replacing the superseded active key entry. */
+    fun rotateStaticKeys(newJson: String, oldHashB64: String?) = run("Rotating static tag keys…") {
+        val n = setup.rotateStaticKeys(newJson, oldHashB64)
+        onChanged()
+        step(AccountStep.Ready(n))
+    }
+
+    fun signOut() = run("Signing out…") {
+        live.logout()
+        container.repository.clearCache()
+        step(currentStep())
+        onChanged()
+    }
 
     private suspend fun currentStep(): AccountStep = when {
         !setup.hasMachine() -> AccountStep.NoMachine

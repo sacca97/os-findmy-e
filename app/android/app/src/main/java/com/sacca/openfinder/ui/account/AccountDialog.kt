@@ -70,6 +70,7 @@ fun AccountDialog(vm: AccountViewModel, onDismiss: () -> Unit) {
                     is AccountStep.Discover -> Discover(step, ui.busy, vm)
                     is AccountStep.Ready -> {
                         Text("Signed in." + if (step.accessories > 0) " ${step.accessories} accessories found." else "")
+                        StaticTagImport(vm, ui.busy)
                         OutlinedButton(onClick = vm::signOut, enabled = !ui.busy, modifier = Modifier.fillMaxWidth()) { Text("Sign out and forget accessories") }
                     }
                 }
@@ -140,4 +141,17 @@ private fun Discover(step: AccountStep.Discover, busy: Boolean, vm: AccountViewM
             enabled = !busy && passcode.isNotEmpty() && selected != null, modifier = Modifier.fillMaxWidth()) { Text("Unlock and read accessories") }
     }
     OutlinedButton(onClick = { picker.launch(arrayOf("application/json", "*/*")) }, enabled = !busy, modifier = Modifier.fillMaxWidth()) { Text("Import accessory keys file instead") }
+    StaticTagImport(vm, busy)
+}
+
+/** The static tag keys go to their own encrypted store; mixing them into the accessory file would break every rolling-key fetch. */
+@Composable
+private fun StaticTagImport(vm: AccountViewModel, busy: Boolean) {
+    val context = LocalContext.current
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        uri?.let { context.contentResolver.openInputStream(it)?.use { s -> vm.importStaticKeys(String(s.readBytes())) } }
+    }
+    OutlinedButton(onClick = { picker.launch(arrayOf("application/json", "*/*")) }, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
+        Text("Import static tag key file (single key)")
+    }
 }

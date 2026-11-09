@@ -26,4 +26,23 @@ interface AccountSetup {
 
     /** Imports accessory keys (a JSON array in the `FindMyAccessory.to_json` format), e.g. made by `findmy beacons`. */
     suspend fun importAccessories(json: String): Int
+
+    /**
+     * Imports static single-key tags: a JSON array of `{"type":"keypair","private_key":...}` objects, or one
+     * such object. Stored in their own blob — deliberately NOT [importAccessories]: a keypair JSON in the
+     * accessory blob makes every rolling-key fetch fail for all tags.
+     */
+    suspend fun importStaticKeys(json: String): Int
+
+    /** Hashed advertising keys (base64, the accessories' stable ids) of the imported static tags. No Apple contact. */
+    suspend fun staticKeyHashes(): List<String>
+
+    /**
+     * Persists a nearby key rotation result: appends [newJson] as the current key and removes
+     * the superseded active entry. The superseded entry is the one whose
+     * hashed advertising key equals [oldHashB64] (the tag's key before the write); when that hash is not in
+     * the blob (reclaim after a foreign write), entries named exactly like the fresh key are retired instead.
+     * Returns the new blob size. No Apple contact.
+     */
+    suspend fun rotateStaticKeys(newJson: String, oldHashB64: String?): Int
 }

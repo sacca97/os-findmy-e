@@ -35,6 +35,7 @@ import org.maplibre.android.maps.MapView
 import org.maplibre.android.maps.Style
 import org.maplibre.android.style.expressions.Expression
 import org.maplibre.android.style.layers.CircleLayer
+import org.maplibre.android.style.layers.LineLayer
 import org.maplibre.android.style.layers.Property
 import org.maplibre.android.style.layers.PropertyFactory.iconAllowOverlap
 import org.maplibre.android.style.layers.PropertyFactory.iconIgnorePlacement
@@ -44,6 +45,11 @@ import org.maplibre.android.style.layers.PropertyFactory.circleOpacity
 import org.maplibre.android.style.layers.PropertyFactory.circleRadius
 import org.maplibre.android.style.layers.PropertyFactory.circleStrokeColor
 import org.maplibre.android.style.layers.PropertyFactory.circleStrokeWidth
+import org.maplibre.android.style.layers.PropertyFactory.circleStrokeOpacity
+import org.maplibre.android.style.layers.PropertyFactory.lineColor
+import org.maplibre.android.style.layers.PropertyFactory.lineJoin
+import org.maplibre.android.style.layers.PropertyFactory.lineOpacity
+import org.maplibre.android.style.layers.PropertyFactory.lineWidth
 import org.maplibre.android.style.layers.PropertyFactory.textAnchor
 import org.maplibre.android.style.layers.PropertyFactory.textColor
 import org.maplibre.android.style.layers.PropertyFactory.textField
@@ -56,14 +62,25 @@ import org.maplibre.android.style.layers.PropertyFactory.textSize
 import org.maplibre.android.style.layers.SymbolLayer
 import org.maplibre.android.style.sources.GeoJsonSource
 
-/** Map styles (OpenFreeMap). Configurable: the settings screen can later offer more. */
+/** Map styles. Dark is offline-first: when a local PMTiles archive exists in the app's external
+ *  `files/map/` directory, the bundled offline style reads it (plus local glyphs/sprites) and no
+ *  tile request ever leaves the device; without one it falls back to OpenFreeMap. */
 object MapStyles {
     const val LIBERTY = "https://tiles.openfreemap.org/styles/liberty"
     const val DARK_ASSET = "map_style_dark.json"
+    const val DARK_OFFLINE_ASSET = "map_style_dark_offline.json"
+    const val MAP_DIR_NAME = "map"
+    const val OFFLINE_TILES_NAME = "basemap.pmtiles"
+    const val TILES_PLACEHOLDER = "__TILES_PATH__"
+    const val MAP_DIR_PLACEHOLDER = "__MAP_DIR__"
 }
 
 private const val SOURCE_ID = "accessories"
 private const val DOT_LAYER = "accessory-dot"
+private const val TRAJECTORY_SOURCE = "trajectory"
+private const val TRAJECTORY_LINE_LAYER = "trajectory-line"
+private const val TRAJECTORY_POINT_LAYER = "trajectory-point"
+private const val EMPTY_FEATURE_COLLECTION = "{\"type\":\"FeatureCollection\",\"features\":[]}"
 
 /**
  * The map, independent of login and report retrieval: it only renders [accessories] from state. Markers are GeoJSON
@@ -82,6 +99,7 @@ fun AccessoryMap(
     onAccessoryClick: (String) -> Unit,
     showMyLocation: Boolean = false,
     locateTick: Int = 0,
+    historyWindow: java.time.Duration = java.time.Duration.ofHours(6),
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -89,6 +107,7 @@ fun AccessoryMap(
     val layoutDirection = LocalLayoutDirection.current
     val features = remember(accessories, selectedId) { accessoryFeaturesJson(accessories, selectedId) }
     val positioned = remember(accessories) { accessories.mapNotNull { a -> a.latestReport?.let { a.id to it } } }
+    val trackJson = remember(accessories, selectedId, historyWindow) { trajectoryJson(accessories, selectedId, historyWindow) }
     val onClick by rememberUpdatedState(onAccessoryClick)
 
     val mapView = remember {
@@ -131,7 +150,7 @@ fun AccessoryMap(
             map = m
             m.uiSettings.isCompassEnabled = false
             m.uiSettings.isRotateGesturesEnabled = false
-            m.cameraPosition = CameraPosition.Builder().target(LatLng(43.61, 7.07)).zoom(9.0).build()
+            m.cameraPosition = CameraPosition.Builder().target(LatLng(34.0, 108.0)).zoom(4.0).build()
             m.addOnMapClickListener { latLng ->
                 val p = m.projection.toScreenLocation(latLng)
                 val r = 28f * density.density
@@ -148,9 +167,15 @@ fun AccessoryMap(
         val m = map ?: return@LaunchedEffect
         styleLoaded = false
         val builder = if (darkTheme) {
-            // Google-Maps-like night palette, generated from Liberty by tools/gen_dark_style.py.
-            val json = withContext(Dispatchers.IO) { appContext.assets.open(MapStyles.DARK_ASSET).use { String(it.readBytes()) } }
-            Style.Builder().fromJson(json)
+            // Offline first: a local PMTiles pack (plus bundled-local glyphs/sprites) means the
+            // map makes no network request at all. Falls back to the OpenFreeMap night palette.
+            val offline = offlineDarkStyleJson(appContext)
+            if (offline != null) Style.Builder().fromJson(offline)
+            else {
+                // Google-Maps-like night palette, generated from Liberty by tools/gen_dark_style.py.
+                val json = withContext(Dispatchers.IO) { appContext.assets.open(MapStyles.DARK_ASSET).use { String(it.readBytes()) } }
+                Style.Builder().fromJson(json)
+            }
         } else Style.Builder().fromUri(MapStyles.LIBERTY)
         m.setStyle(builder) { style ->
             installMarkerLayers(style, latestFeatures, darkTheme)
@@ -162,6 +187,12 @@ fun AccessoryMap(
     LaunchedEffect(features, styleLoaded) {
         if (!styleLoaded) return@LaunchedEffect
         map?.style?.getSourceAs<GeoJsonSource>(SOURCE_ID)?.setGeoJson(features)
+    }
+
+    // Trajectory of the selected accessory (or the only one): replace the source's data.
+    LaunchedEffect(trackJson, styleLoaded) {
+        if (!styleLoaded) return@LaunchedEffect
+        map?.style?.getSourceAs<GeoJsonSource>(TRAJECTORY_SOURCE)?.setGeoJson(trackJson)
     }
 
     // "You are here": the SDK's location component (blue dot), only once the permission is granted.
@@ -224,8 +255,91 @@ fun AccessoryMap(
 
 private fun androidx.compose.ui.unit.Density.dpPxInt(dp: Int): Int = (dp * density).toInt()
 
+/**
+ * GeoJSON for the selected accessory's (or, when nothing is selected, the only one's) trail within
+ * [window]: one LineString through the reports plus a Point per report carrying an "ageFrac"
+ * (0 = oldest, 1 = newest) that the map layers grade by. Empty when there is nothing to draw.
+ */
+private fun trajectoryJson(accessories: List<Accessory>, selectedId: String?, window: java.time.Duration): String {
+    val accessory = accessories.firstOrNull { it.id == selectedId && it.history.isNotEmpty() }
+        ?: accessories.singleOrNull { it.history.isNotEmpty() }
+        ?: return EMPTY_FEATURE_COLLECTION
+    val newest = accessory.history.last()
+    val oldest = newest.observedAt.minus(window)
+    val points = accessory.history.filter { !it.observedAt.isBefore(oldest) }
+    if (points.isEmpty()) return EMPTY_FEATURE_COLLECTION
+    val span = java.time.Duration.between(points.first().observedAt, newest.observedAt).seconds.coerceAtLeast(1)
+    val features = org.json.JSONArray()
+    if (points.size >= 2) {
+        features.put(org.json.JSONObject().apply {
+            put("type", "Feature")
+            put("geometry", org.json.JSONObject().apply {
+                put("type", "LineString")
+                put("coordinates", org.json.JSONArray().also { coords ->
+                    points.forEach { p -> coords.put(org.json.JSONArray(listOf(p.longitude, p.latitude))) }
+                })
+            })
+            put("properties", org.json.JSONObject())
+        })
+    }
+    points.forEach { p ->
+        val ageFrac = java.time.Duration.between(points.first().observedAt, p.observedAt).seconds.toDouble() / span
+        features.put(org.json.JSONObject().apply {
+            put("type", "Feature")
+            put("geometry", org.json.JSONObject().apply {
+                put("type", "Point")
+                put("coordinates", org.json.JSONArray(listOf(p.longitude, p.latitude)))
+            })
+            put("properties", org.json.JSONObject().put("ageFrac", ageFrac))
+        })
+    }
+    return org.json.JSONObject().put("type", "FeatureCollection").put("features", features).toString()
+}
+
+/**
+ * The offline dark style with its placeholders filled in, or null when there is no local tile pack
+ * (or the bundled template is missing). The template's tile, glyph and sprite URLs all point into
+ * the app's external `files/map/` directory, so nothing touches the network.
+ */
+private suspend fun offlineDarkStyleJson(context: android.content.Context): String? =
+    withContext(Dispatchers.IO) {
+        val dir = context.getExternalFilesDir(null)?.resolve(MapStyles.MAP_DIR_NAME) ?: return@withContext null
+        val tiles = dir.resolve(MapStyles.OFFLINE_TILES_NAME)
+        if (!tiles.exists()) return@withContext null
+        try {
+            context.assets.open(MapStyles.DARK_OFFLINE_ASSET).use { stream ->
+                String(stream.readBytes())
+                    .replace(MapStyles.TILES_PLACEHOLDER, tiles.absolutePath)
+                    .replace(MapStyles.MAP_DIR_PLACEHOLDER, dir.absolutePath)
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
 private fun installMarkerLayers(style: Style, features: String, dark: Boolean) {
     style.addSource(GeoJsonSource(SOURCE_ID, features))
+    // The trajectory sits under the markers: a line through the report trail plus time-graded points
+    // (newest largest and most opaque). Points are filtered by geometry type so the line's vertices
+    // are not drawn twice.
+    style.addSource(GeoJsonSource(TRAJECTORY_SOURCE, EMPTY_FEATURE_COLLECTION))
+    style.addLayer(
+        LineLayer(TRAJECTORY_LINE_LAYER, TRAJECTORY_SOURCE).withProperties(
+            lineColor("#1E6FD9"), lineWidth(2.5f), lineOpacity(0.75f), lineJoin(Property.LINE_JOIN_ROUND),
+        ),
+    )
+    style.addLayer(
+        CircleLayer(TRAJECTORY_POINT_LAYER, TRAJECTORY_SOURCE).withProperties(
+            circleColor("#1E6FD9"),
+            circleRadius(
+                Expression.interpolate(Expression.exponential(2f), Expression.get("ageFrac"),
+                    Expression.stop(0f, 3f), Expression.stop(1f, 5.5f))),
+            circleOpacity(
+                Expression.interpolate(Expression.linear(), Expression.get("ageFrac"),
+                    Expression.stop(0f, 0.3f), Expression.stop(1f, 0.95f))),
+            circleStrokeColor("#FFFFFF"), circleStrokeWidth(1f), circleStrokeOpacity(0.6f),
+        ).withFilter(Expression.eq(Expression.geometryType(), Expression.literal("Point"))),
+    )
     val labelText = if (dark) "#FFFFFF" else "#1B1B1F"
     val labelHalo = if (dark) "#1B1B1F" else "#FFFFFF"
     // Halo behind the selected accessory.
