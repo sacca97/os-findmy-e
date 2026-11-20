@@ -23,7 +23,6 @@ anisette implementation drives.
 from __future__ import annotations
 
 import plistlib
-import ssl
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
@@ -35,7 +34,7 @@ LOOKUP_URL = "https://gsa.apple.com/grandslam/GsService2/lookup"
 # AuthKit's own identifiers.
 USER_AGENT = "akd/1.0 CFNetwork/1404.0.5 Darwin/22.3.0"
 DEFAULT_CLIENT_INFO = (
-    "<MacBookPro13,2> <macOS;13.1;22C65> <com.apple.AuthKit/1 (com.apple.akd/1.0)>"
+    "<MacBookPro13,2> <Mac OS X;13.1;22C65> <com.apple.AuthKit/1 (com.apple.akd/1.0)>"
 )
 CLIENT_APP_NAME = "Setup"
 
@@ -81,12 +80,12 @@ class GSA:
         self.device = device
         self.timeout = timeout
         self.urls: dict[str, str] = {}
-        # Apple serves a full chain but this machine's trust store does not
-        # carry the Apple root, so verification is disabled *only* to work
-        # around a local trust-store gap; the certificate is still Apple's.
-        self._ctx = ssl.create_default_context()
-        self._ctx.check_hostname = False
-        self._ctx.verify_mode = ssl.CERT_NONE
+        # Apple serves a full chain, but most trust stores - Linux's and Windows' among them -
+        # do not carry the Apple root it ends in. FindMy.py bundles that root, pinned by hash,
+        # so verification stays on everywhere instead of being switched off to get past it.
+        from findmy.util.tls import apple_trust_context
+
+        self._ctx = apple_trust_context()
 
     # -- transport --------------------------------------------------------
     def _headers(self, *, client_time: bool = False) -> dict[str, str]:

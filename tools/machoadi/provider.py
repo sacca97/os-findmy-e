@@ -40,7 +40,7 @@ CLI = Path(__file__).resolve().parent / "mac_anisette.py"
 # are one release and are only correct together.
 IDENTITY = DeviceIdentity(
     model="MacBookPro13,2",
-    os_name="macOS",
+    os_name="Mac OS X",  # not "macOS": Apple refuses that at sign-in since 2026-11-20
     os_version="13.1",
     os_build="22C65",
     cfnetwork="1404.0.5",
