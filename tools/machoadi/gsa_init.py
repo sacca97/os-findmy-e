@@ -247,7 +247,7 @@ def load_headers(args: argparse.Namespace) -> tuple[dict[str, str], str]:
     return headers, ani.identity["client_info"]
 
 
-DEFAULT_CLIENT_INFO = "<MacBookPro13,2> <macOS;13.1;22C65> <com.apple.AuthKit/1 (com.apple.akd/1.0)>"
+DEFAULT_CLIENT_INFO = "<MacBookPro13,2> <Mac OS X;13.1;22C65> <com.apple.AuthKit/1 (com.apple.akd/1.0)>"
 
 
 async def run(args: argparse.Namespace) -> int:

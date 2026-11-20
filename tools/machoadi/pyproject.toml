@@ -1,0 +1,17 @@
+[project]
+name = "machoadi"
+version = "0.1.0"
+description = "Apple's macOS CoreADI under Unicorn, producing Mac-lineage Anisette on any OS"
+license = "GPL-2.0-only"
+requires-python = ">=3.10"
+# FindMy.py for its pinned Apple root (gsa.py) and DeviceIdentity (provider.py). Left unpinned:
+# the consumer pins it, and two pins of one library are rule 14 of OpenTagViewer's AGENTS.md.
+dependencies = ["unicorn>=2.1,<3", "FindMy"]
+
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["machoadi"]
+package-dir = { machoadi = "." }

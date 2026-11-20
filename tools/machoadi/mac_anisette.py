@@ -40,7 +40,11 @@ from gsa import GSA, Device, GSAError  # noqa: E402
 
 DS_ID = -2  # Apple's "no account" pseudo-DSID, same one akd uses locally.
 STORE_DIR = "/Users/Shared/adi"
-DEFAULT_CLIENT_INFO = "<MacBookPro13,2> <macOS;13.1;22C65> <com.apple.AuthKit/1 (com.apple.akd/1.0)>"
+# Spelt `Mac OS X`, as macOS's own akd does. Since 2026-11-20 Apple's edge answers every Grand
+# Slam sign-in whose client info says `<macOS;...>` with a 190-byte HTML 503, before any
+# credential is examined; the same request saying `<Mac OS X;...>` is let through.
+# Provisioning accepts both. parawanderer/OpenTagViewer#289.
+DEFAULT_CLIENT_INFO = "<MacBookPro13,2> <Mac OS X;13.1;22C65> <com.apple.AuthKit/1 (com.apple.akd/1.0)>"
 
 # A Mac's `X-Mme-Device-Id` is its **provisioning UDID**, which a live Mac reports as 8 hex,
 # a dash, and 16 hex (`system_profiler SPHardwareDataType`, 25 characters) -- and which is
@@ -73,25 +77,29 @@ def provisioned_at(state: Path | str) -> float:
     return min(p.stat().st_mtime for p in (state / "store").glob("adi*.pb"))
 
 
-def _mint_identity() -> dict:
-    """A fresh machine identity, in the shapes Apple's own client uses."""
+def _mint_identity(serial: str | None = None) -> dict:
+    """A fresh machine identity, in the shapes Apple's own client uses.
+
+    :param serial: The `X-Apple-I-SRL-NO` to present, for a caller that brands its own
+        device-list entry. A `C02` serial is drawn when it is None.
+    """
     return {
         "device_id": f"{_UDID_PREFIX}-{secrets.token_hex(8).upper()}",
         "local_user_uuid": secrets.token_hex(16).upper(),
         "client_info": DEFAULT_CLIENT_INFO,
         "host_uuid": secrets.token_hex(16),
         "routing": None,
-        "serial": "C02" + "".join(secrets.choice(_SERIAL_ALPHABET) for _ in range(9)),
+        "serial": serial or "C02" + "".join(secrets.choice(_SERIAL_ALPHABET) for _ in range(9)),
     }
 
 
 class MacAnisette:
-    def __init__(self, state: Path, *, log: bool = False) -> None:
+    def __init__(self, state: Path, *, log: bool = False, serial: str | None = None) -> None:
         self.state = Path(state)
         self.state.mkdir(parents=True, exist_ok=True)
         self.log = log
 
-        self.identity = self._load_identity()
+        self.identity = self._load_identity(serial)
         self.adi = CoreADI(log=log)
         self.adi.stubs.hostuuid = bytes.fromhex(self.identity["host_uuid"])
         self._load_store()
@@ -104,11 +112,12 @@ class MacAnisette:
             self._initialized = True
 
     # -- identity ---------------------------------------------------------
-    def _load_identity(self) -> dict:
+    def _load_identity(self, serial: str | None = None) -> dict:
         path = self.state / "identity.json"
         if path.exists():
+            # A stored machine keeps its own serial; changing it would be a second device.
             return json.loads(path.read_text())
-        return _mint_identity()
+        return _mint_identity(serial)
 
     def _save_identity(self) -> None:
         (self.state / "identity.json").write_text(json.dumps(self.identity, indent=2) + "\n")
@@ -218,10 +227,11 @@ def main() -> int:
     ap.add_argument("--state", default="/tmp/macadi/macadi", help="state directory")
     ap.add_argument("--out", help="write `headers` output as JSON here instead of stdout")
     ap.add_argument("--log", action="store_true", help="log the synthetic syscalls")
+    ap.add_argument("--serial", help="serial to present for a machine provisioned now (ignored once stored)")
     args = ap.parse_args()
 
 
-    ani = MacAnisette(Path(args.state), log=args.log)
+    ani = MacAnisette(Path(args.state), log=args.log, serial=args.serial)
     if args.command == "provision":
         try:
             print(json.dumps(ani.provision(), indent=2))
